@@ -1,0 +1,695 @@
+[
+  {
+    "id": "ebetsu",
+    "name": "江別",
+    "theater_id": "81005",
+    "area": "北海道",
+    "url": "https://theater.aeoncinema.com/theaters/ebetsu/"
+  },
+  {
+    "id": "otaru",
+    "name": "小樽",
+    "theater_id": "81024",
+    "area": "北海道",
+    "url": "https://theater.aeoncinema.com/theaters/otaru/"
+  },
+  {
+    "id": "kitami",
+    "name": "北見",
+    "theater_id": "81034",
+    "area": "北海道",
+    "url": "https://theater.aeoncinema.com/theaters/kitami/"
+  },
+  {
+    "id": "asahikawa",
+    "name": "旭川駅前",
+    "theater_id": "81076",
+    "area": "北海道",
+    "url": "https://theater.aeoncinema.com/theaters/asahikawa/"
+  },
+  {
+    "id": "kushiro",
+    "name": "釧路",
+    "theater_id": "81042",
+    "area": "北海道",
+    "url": "https://theater.aeoncinema.com/theaters/kushiro/"
+  },
+  {
+    "id": "hirosaki",
+    "name": "弘前",
+    "theater_id": "81020",
+    "area": "青森",
+    "url": "https://theater.aeoncinema.com/theaters/hirosaki/"
+  },
+  {
+    "id": "shinaomori",
+    "name": "新青森",
+    "theater_id": "81094",
+    "area": "青森",
+    "url": "https://theater.aeoncinema.com/theaters/shinaomori/"
+  },
+  {
+    "id": "oomagari",
+    "name": "大曲",
+    "theater_id": "81509",
+    "area": "秋田",
+    "url": "https://theater.aeoncinema.com/theaters/oomagari/"
+  },
+  {
+    "id": "ezuriko",
+    "name": "江釣子",
+    "theater_id": "81098",
+    "area": "岩手",
+    "url": "https://theater.aeoncinema.com/theaters/ezuriko/"
+  },
+  {
+    "id": "natori",
+    "name": "名取",
+    "theater_id": "81055",
+    "area": "宮城",
+    "url": "https://theater.aeoncinema.com/theaters/natori/"
+  },
+  {
+    "id": "rifu",
+    "name": "新利府",
+    "theater_id": "81090",
+    "area": "宮城",
+    "url": "https://theater.aeoncinema.com/theaters/rifu/"
+  },
+  {
+    "id": "ishinomaki",
+    "name": "石巻",
+    "theater_id": "81056",
+    "area": "宮城",
+    "url": "https://theater.aeoncinema.com/theaters/ishinomaki/"
+  },
+  {
+    "id": "tendo",
+    "name": "天童",
+    "theater_id": "81072",
+    "area": "山形",
+    "url": "https://theater.aeoncinema.com/theaters/tendo/"
+  },
+  {
+    "id": "yonezawa",
+    "name": "米沢",
+    "theater_id": "811017",
+    "area": "山形",
+    "url": "https://theater.aeoncinema.com/theaters/yonezawa/"
+  },
+  {
+    "id": "mikawa",
+    "name": "三川",
+    "theater_id": "81504",
+    "area": "山形",
+    "url": "https://theater.aeoncinema.com/theaters/mikawa/"
+  },
+  {
+    "id": "fukushima",
+    "name": "福島",
+    "theater_id": "81006",
+    "area": "福島",
+    "url": "https://theater.aeoncinema.com/theaters/fukushima/"
+  },
+  {
+    "id": "oota",
+    "name": "太田",
+    "theater_id": "81505",
+    "area": "群馬",
+    "url": "https://theater.aeoncinema.com/theaters/oota/"
+  },
+  {
+    "id": "takasaki",
+    "name": "高崎",
+    "theater_id": "81506",
+    "area": "群馬",
+    "url": "https://theater.aeoncinema.com/theaters/takasaki/"
+  },
+  {
+    "id": "shimotsuma",
+    "name": "下妻",
+    "theater_id": "81511",
+    "area": "茨城",
+    "url": "https://theater.aeoncinema.com/theaters/shimotsuma/"
+  },
+  {
+    "id": "moriya",
+    "name": "守谷",
+    "theater_id": "81059",
+    "area": "茨城",
+    "url": "https://theater.aeoncinema.com/theaters/moriya/"
+  },
+  {
+    "id": "ohi",
+    "name": "大井",
+    "theater_id": "81012",
+    "area": "埼玉",
+    "url": "https://theater.aeoncinema.com/theaters/ohi/"
+  },
+  {
+    "id": "ohmiya",
+    "name": "大宮",
+    "theater_id": "81037",
+    "area": "埼玉",
+    "url": "https://theater.aeoncinema.com/theaters/ohmiya/"
+  },
+  {
+    "id": "kumagaya",
+    "name": "熊谷",
+    "theater_id": "81040",
+    "area": "埼玉",
+    "url": "https://theater.aeoncinema.com/theaters/kumagaya/"
+  },
+  {
+    "id": "urawa",
+    "name": "浦和美園",
+    "theater_id": "81051",
+    "area": "埼玉",
+    "url": "https://theater.aeoncinema.com/theaters/urawa/"
+  },
+  {
+    "id": "hanyu",
+    "name": "羽生",
+    "theater_id": "81062",
+    "area": "埼玉",
+    "url": "https://theater.aeoncinema.com/theaters/hanyu/"
+  },
+  {
+    "id": "koshigaya",
+    "name": "越谷レイクタウン",
+    "theater_id": "81508",
+    "area": "埼玉",
+    "url": "https://theater.aeoncinema.com/theaters/koshigaya/"
+  },
+  {
+    "id": "kasukabe",
+    "name": "春日部",
+    "theater_id": "81068",
+    "area": "埼玉",
+    "url": "https://theater.aeoncinema.com/theaters/kasukabe/"
+  },
+  {
+    "id": "kawaguchi",
+    "name": "川口",
+    "theater_id": "81091",
+    "area": "埼玉",
+    "url": "https://theater.aeoncinema.com/theaters/kawaguchi/"
+  },
+  {
+    "id": "itabashi",
+    "name": "板橋",
+    "theater_id": "81033",
+    "area": "東京",
+    "url": "https://theater.aeoncinema.com/theaters/itabashi/"
+  },
+  {
+    "id": "chofu",
+    "name": "シアタス調布",
+    "theater_id": "81084",
+    "area": "東京",
+    "url": "https://theater.aeoncinema.com/theaters/chofu/"
+  },
+  {
+    "id": "tama",
+    "name": "多摩センター",
+    "theater_id": "81050",
+    "area": "東京",
+    "url": "https://theater.aeoncinema.com/theaters/tama/"
+  },
+  {
+    "id": "hachiojitakiyama",
+    "name": "八王子滝山",
+    "theater_id": "81100",
+    "area": "東京",
+    "url": "https://theater.aeoncinema.com/theaters/hachiojitakiyama/"
+  },
+  {
+    "id": "musashino",
+    "name": "むさし村山",
+    "theater_id": "81054",
+    "area": "東京",
+    "url": "https://theater.aeoncinema.com/theaters/musashino/"
+  },
+  {
+    "id": "hinode",
+    "name": "日の出",
+    "theater_id": "81063",
+    "area": "東京",
+    "url": "https://theater.aeoncinema.com/theaters/hinode/"
+  },
+  {
+    "id": "ichikawa",
+    "name": "市川妙典",
+    "theater_id": "81026",
+    "area": "千葉",
+    "url": "https://theater.aeoncinema.com/theaters/ichikawa/"
+  },
+  {
+    "id": "tsudanumasouth",
+    "name": "津田沼South",
+    "theater_id": "81101",
+    "area": "千葉",
+    "url": "https://theater.aeoncinema.com/theaters/tsudanumasouth/"
+  },
+  {
+    "id": "makuhari",
+    "name": "幕張新都心",
+    "theater_id": "81070",
+    "area": "千葉",
+    "url": "https://theater.aeoncinema.com/theaters/makuhari/"
+  },
+  {
+    "id": "chiba",
+    "name": "千葉ニュータウン",
+    "theater_id": "81052",
+    "area": "千葉",
+    "url": "https://theater.aeoncinema.com/theaters/chiba/"
+  },
+  {
+    "id": "choshi",
+    "name": "銚子",
+    "theater_id": "81512",
+    "area": "千葉",
+    "url": "https://theater.aeoncinema.com/theaters/choshi/"
+  },
+  {
+    "id": "chigasaki",
+    "name": "茅ヶ崎",
+    "theater_id": "81011",
+    "area": "神奈川",
+    "url": "https://theater.aeoncinema.com/theaters/chigasaki/"
+  },
+  {
+    "id": "zama",
+    "name": "座間",
+    "theater_id": "81088",
+    "area": "神奈川",
+    "url": "https://theater.aeoncinema.com/theaters/zama/"
+  },
+  {
+    "id": "shinyurigaoka",
+    "name": "新百合ヶ丘",
+    "theater_id": "81001",
+    "area": "神奈川",
+    "url": "https://theater.aeoncinema.com/theaters/shinyurigaoka/"
+  },
+  {
+    "id": "minatomirai",
+    "name": "みなとみらい",
+    "theater_id": "81029",
+    "area": "神奈川",
+    "url": "https://theater.aeoncinema.com/theaters/minatomirai/"
+  },
+  {
+    "id": "kohoku",
+    "name": "港北ニュータウン",
+    "theater_id": "81057",
+    "area": "神奈川",
+    "url": "https://theater.aeoncinema.com/theaters/kohoku/"
+  },
+  {
+    "id": "kenoh",
+    "name": "県央",
+    "theater_id": "81002",
+    "area": "新潟",
+    "url": "https://theater.aeoncinema.com/theaters/kenoh/"
+  },
+  {
+    "id": "niigata",
+    "name": "新潟西",
+    "theater_id": "81036",
+    "area": "新潟",
+    "url": "https://theater.aeoncinema.com/theaters/niigata/"
+  },
+  {
+    "id": "niigatakameda",
+    "name": "新潟亀田インター",
+    "theater_id": "81061",
+    "area": "新潟",
+    "url": "https://theater.aeoncinema.com/theaters/niigatakameda/"
+  },
+  {
+    "id": "tonami",
+    "name": "となみ",
+    "theater_id": "81093",
+    "area": "富山",
+    "url": "https://theater.aeoncinema.com/theaters/tonami/"
+  },
+  {
+    "id": "hakusan",
+    "name": "白山",
+    "theater_id": "81092",
+    "area": "石川",
+    "url": "https://theater.aeoncinema.com/theaters/hakusan/"
+  },
+  {
+    "id": "kanazawa",
+    "name": "金沢",
+    "theater_id": "81032",
+    "area": "石川",
+    "url": "https://theater.aeoncinema.com/theaters/kanazawa/"
+  },
+  {
+    "id": "kanazawaforus",
+    "name": "金沢フォーラス",
+    "theater_id": "81507",
+    "area": "石川",
+    "url": "https://theater.aeoncinema.com/theaters/kanazawaforus/"
+  },
+  {
+    "id": "shinkomatsu",
+    "name": "新小松",
+    "theater_id": "81080",
+    "area": "石川",
+    "url": "https://theater.aeoncinema.com/theaters/shinkomatsu/"
+  },
+  {
+    "id": "suzaka",
+    "name": "須坂",
+    "theater_id": "81097",
+    "area": "長野",
+    "url": "https://theater.aeoncinema.com/theaters/suzaka/"
+  },
+  {
+    "id": "matsumoto",
+    "name": "松本",
+    "theater_id": "81083",
+    "area": "長野",
+    "url": "https://theater.aeoncinema.com/theaters/matsumoto/"
+  },
+  {
+    "id": "kakamigahara",
+    "name": "各務原",
+    "theater_id": "81060",
+    "area": "岐阜",
+    "url": "https://theater.aeoncinema.com/theaters/kakamigahara/"
+  },
+  {
+    "id": "toki",
+    "name": "土岐",
+    "theater_id": "81095",
+    "area": "岐阜",
+    "url": "https://theater.aeoncinema.com/theaters/toki/"
+  },
+  {
+    "id": "fujinomiya",
+    "name": "富士宮",
+    "theater_id": "81513",
+    "area": "静岡",
+    "url": "https://theater.aeoncinema.com/theaters/fujinomiya/"
+  },
+  {
+    "id": "toyokawa",
+    "name": "豊川",
+    "theater_id": "81010",
+    "area": "愛知",
+    "url": "https://theater.aeoncinema.com/theaters/toyokawa/"
+  },
+  {
+    "id": "toyota",
+    "name": "豊田KiTARA",
+    "theater_id": "81085",
+    "area": "愛知",
+    "url": "https://theater.aeoncinema.com/theaters/toyota/"
+  },
+  {
+    "id": "oodaka",
+    "name": "大高",
+    "theater_id": "81067",
+    "area": "愛知",
+    "url": "https://theater.aeoncinema.com/theaters/oodaka/"
+  },
+  {
+    "id": "nagakute",
+    "name": "長久手",
+    "theater_id": "81079",
+    "area": "愛知",
+    "url": "https://theater.aeoncinema.com/theaters/nagakute/"
+  },
+  {
+    "id": "nagoyachaya",
+    "name": "名古屋茶屋",
+    "theater_id": "81073",
+    "area": "愛知",
+    "url": "https://theater.aeoncinema.com/theaters/nagoyachaya/"
+  },
+  {
+    "id": "wonder",
+    "name": "ワンダー",
+    "theater_id": "81502",
+    "area": "愛知",
+    "url": "https://theater.aeoncinema.com/theaters/wonder/"
+  },
+  {
+    "id": "okazaki",
+    "name": "岡崎",
+    "theater_id": "81510",
+    "area": "愛知",
+    "url": "https://theater.aeoncinema.com/theaters/okazaki/"
+  },
+  {
+    "id": "tokoname",
+    "name": "常滑",
+    "theater_id": "81082",
+    "area": "愛知",
+    "url": "https://theater.aeoncinema.com/theaters/tokoname/"
+  },
+  {
+    "id": "kuwana",
+    "name": "桑名",
+    "theater_id": "81018",
+    "area": "三重",
+    "url": "https://theater.aeoncinema.com/theaters/kuwana/"
+  },
+  {
+    "id": "toin",
+    "name": "東員",
+    "theater_id": "81069",
+    "area": "三重",
+    "url": "https://theater.aeoncinema.com/theaters/toin/"
+  },
+  {
+    "id": "suzuka",
+    "name": "鈴鹿",
+    "theater_id": "81014",
+    "area": "三重",
+    "url": "https://theater.aeoncinema.com/theaters/suzuka/"
+  },
+  {
+    "id": "tsuminami",
+    "name": "津南",
+    "theater_id": "81087",
+    "area": "三重",
+    "url": "https://theater.aeoncinema.com/theaters/tsuminami/"
+  },
+  {
+    "id": "oumihachiman",
+    "name": "近江八幡",
+    "theater_id": "81035",
+    "area": "滋賀",
+    "url": "https://theater.aeoncinema.com/theaters/oumihachiman/"
+  },
+  {
+    "id": "kusatsu",
+    "name": "草津",
+    "theater_id": "81065",
+    "area": "滋賀",
+    "url": "https://theater.aeoncinema.com/theaters/kusatsu/"
+  },
+  {
+    "id": "takanohara",
+    "name": "高の原",
+    "theater_id": "81058",
+    "area": "京都",
+    "url": "https://theater.aeoncinema.com/theaters/takanohara/"
+  },
+  {
+    "id": "kumiyama",
+    "name": "久御山",
+    "theater_id": "81501",
+    "area": "京都",
+    "url": "https://theater.aeoncinema.com/theaters/kumiyama/"
+  },
+  {
+    "id": "katsuragawa",
+    "name": "京都桂川",
+    "theater_id": "81074",
+    "area": "京都",
+    "url": "https://theater.aeoncinema.com/theaters/katsuragawa/"
+  },
+  {
+    "id": "ibaraki",
+    "name": "茨木",
+    "theater_id": "81045",
+    "area": "大阪",
+    "url": "https://theater.aeoncinema.com/theaters/ibaraki/"
+  },
+  {
+    "id": "shijonawate",
+    "name": "四條畷",
+    "theater_id": "81077",
+    "area": "大阪",
+    "url": "https://theater.aeoncinema.com/theaters/shijonawate/"
+  },
+  {
+    "id": "shinsaibashi",
+    "name": "シアタス心斎橋",
+    "theater_id": "81089",
+    "area": "大阪",
+    "url": "https://theater.aeoncinema.com/theaters/shinsaibashi/"
+  },
+  {
+    "id": "sennan",
+    "name": "りんくう泉南",
+    "theater_id": "81048",
+    "area": "大阪",
+    "url": "https://theater.aeoncinema.com/theaters/sennan/"
+  },
+  {
+    "id": "dainichi",
+    "name": "大日",
+    "theater_id": "81053",
+    "area": "大阪",
+    "url": "https://theater.aeoncinema.com/theaters/dainichi/"
+  },
+  {
+    "id": "akashi",
+    "name": "明石",
+    "theater_id": "81004",
+    "area": "兵庫",
+    "url": "https://theater.aeoncinema.com/theaters/akashi/"
+  },
+  {
+    "id": "sanda",
+    "name": "三田ウッディタウン",
+    "theater_id": "81038",
+    "area": "兵庫",
+    "url": "https://theater.aeoncinema.com/theaters/sanda/"
+  },
+  {
+    "id": "kakogawa",
+    "name": "加古川",
+    "theater_id": "81046",
+    "area": "兵庫",
+    "url": "https://theater.aeoncinema.com/theaters/kakogawa/"
+  },
+  {
+    "id": "wakayama",
+    "name": "和歌山",
+    "theater_id": "81071",
+    "area": "和歌山",
+    "url": "https://theater.aeoncinema.com/theaters/wakayama/"
+  },
+  {
+    "id": "okayama",
+    "name": "岡山",
+    "theater_id": "81075",
+    "area": "岡山",
+    "url": "https://theater.aeoncinema.com/theaters/okayama/"
+  },
+  {
+    "id": "hiroshima",
+    "name": "広島",
+    "theater_id": "81003",
+    "area": "広島",
+    "url": "https://theater.aeoncinema.com/theaters/hiroshima/"
+  },
+  {
+    "id": "seifu",
+    "name": "広島西風新都",
+    "theater_id": "81086",
+    "area": "広島",
+    "url": "https://theater.aeoncinema.com/theaters/seifu/"
+  },
+  {
+    "id": "matsue",
+    "name": "松江",
+    "theater_id": "81096",
+    "area": "島根",
+    "url": "https://theater.aeoncinema.com/theaters/matsue/"
+  },
+  {
+    "id": "hofu",
+    "name": "防府",
+    "theater_id": "81022",
+    "area": "山口",
+    "url": "https://theater.aeoncinema.com/theaters/hofu/"
+  },
+  {
+    "id": "utazu",
+    "name": "宇多津",
+    "theater_id": "81102",
+    "area": "香川",
+    "url": "https://theater.aeoncinema.com/theaters/utazu/"
+  },
+  {
+    "id": "takamatsu",
+    "name": "高松東",
+    "theater_id": "81025",
+    "area": "香川",
+    "url": "https://theater.aeoncinema.com/theaters/takamatsu/"
+  },
+  {
+    "id": "ayagawa",
+    "name": "綾川",
+    "theater_id": "81064",
+    "area": "香川",
+    "url": "https://theater.aeoncinema.com/theaters/ayagawa/"
+  },
+  {
+    "id": "tokushima",
+    "name": "徳島",
+    "theater_id": "81081",
+    "area": "徳島",
+    "url": "https://theater.aeoncinema.com/theaters/tokushima/"
+  },
+  {
+    "id": "imabari",
+    "name": "今治新都市",
+    "theater_id": "81078",
+    "area": "愛媛",
+    "url": "https://theater.aeoncinema.com/theaters/imabari/"
+  },
+  {
+    "id": "ohnojo",
+    "name": "大野城",
+    "theater_id": "81016",
+    "area": "福岡",
+    "url": "https://theater.aeoncinema.com/theaters/ohnojo/"
+  },
+  {
+    "id": "tobata",
+    "name": "戸畑",
+    "theater_id": "81021",
+    "area": "福岡",
+    "url": "https://theater.aeoncinema.com/theaters/tobata/"
+  },
+  {
+    "id": "fukuoka",
+    "name": "福岡",
+    "theater_id": "81047",
+    "area": "福岡",
+    "url": "https://theater.aeoncinema.com/theaters/fukuoka/"
+  },
+  {
+    "id": "chikushino",
+    "name": "筑紫野",
+    "theater_id": "81066",
+    "area": "福岡",
+    "url": "https://theater.aeoncinema.com/theaters/chikushino/"
+  },
+  {
+    "id": "sagayamato",
+    "name": "佐賀大和",
+    "theater_id": "81503",
+    "area": "佐賀",
+    "url": "https://theater.aeoncinema.com/theaters/sagayamato/"
+  },
+  {
+    "id": "kumamoto",
+    "name": "熊本",
+    "theater_id": "81049",
+    "area": "熊本",
+    "url": "https://theater.aeoncinema.com/theaters/kumamoto/"
+  }
+]

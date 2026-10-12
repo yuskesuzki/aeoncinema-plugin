@@ -1,0 +1,14 @@
+[project]
+name = "aeoncinema-plugin"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+aeoncinema-plugin = "aeoncinema_plugin:main"
+
+[build-system]
+requires = ["uv_build>=0.12.10,<0.13.0"]
+build-backend = "uv_build"
