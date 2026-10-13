@@ -28,6 +28,38 @@ from typing import Any, Dict, List, Optional, Tuple
 # 日本時間 (JST: UTC+9)
 JST = timezone(timedelta(hours=9))
 THEATER_JSON_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "theater.json")
+DEFAULT_CONFIG_DIR = os.path.expanduser("~/.config/aeoncinema-plugin")
+DEFAULT_CONFIG_PATH = os.path.join(DEFAULT_CONFIG_DIR, "config.json")
+
+
+def get_default_config() -> Dict[str, Any]:
+    return {
+        "theater": "ebetsu",
+        "within_hours": 3.0,
+        "english_mode": False,
+        "format": "text",
+    }
+
+
+def load_user_config(config_path: str = DEFAULT_CONFIG_PATH) -> Dict[str, Any]:
+    """設定ファイルを読み込む。存在しない場合はデフォルト設定を返す。"""
+    config = get_default_config()
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                user_data = json.load(f)
+                if isinstance(user_data, dict):
+                    config.update(user_data)
+        except Exception as e:
+            print(f"警告: 設定ファイルの読み込みに失敗しました ({e})。デフォルト設定を使用します。", file=sys.stderr)
+    return config
+
+
+def save_user_config(config: Dict[str, Any], config_path: str = DEFAULT_CONFIG_PATH) -> None:
+    """設定ファイルを保存する。"""
+    os.makedirs(os.path.dirname(os.path.abspath(config_path)), exist_ok=True)
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
 
 
 def load_allowed_theaters(json_path: str = THEATER_JSON_PATH) -> List[Dict[str, Any]]:
@@ -522,8 +554,8 @@ def main():
     parser.add_argument(
         "--within-hours",
         type=float,
-        default=3.0,
-        help="--upcoming モード時に対象とする上映開始までの時間（時間単位、デフォルト: 3.0）",
+        default=None,
+        help="--upcoming モード時に対象とする上映開始までの時間（時間単位、未指定時は保存設定または 3.0）",
     )
     parser.add_argument(
         "-t", "--time", "--base-time",
@@ -533,8 +565,8 @@ def main():
     parser.add_argument(
         "--lang",
         choices=["ja", "en"],
-        default="ja",
-        help="表示言語 (ja: 日本語, en: 英語, デフォルト: ja)",
+        default=None,
+        help="表示言語 (ja: 日本語, en: 英語, デフォルト: 保存設定または ja)",
     )
     parser.add_argument(
         "--en", "--english",
@@ -552,6 +584,21 @@ def main():
         "-o", "--output",
         dest="output_file",
         help="出力先ファイルパス (省略時は標準出力)",
+    )
+    parser.add_argument(
+        "--config-file",
+        default=DEFAULT_CONFIG_PATH,
+        help=f"設定ファイルパス (デフォルト: {DEFAULT_CONFIG_PATH})",
+    )
+    parser.add_argument(
+        "--save-config",
+        action="store_true",
+        help="指定した設定（劇場、直近時間、言語等）を設定ファイルに保存する",
+    )
+    parser.add_argument(
+        "--show-config",
+        action="store_true",
+        help="保存されている設定内容を表示する",
     )
     parser.add_argument(
         "--list-dates",
@@ -576,8 +623,28 @@ def main():
 
     args = parser.parse_args()
 
-    # 表示言語の決定
-    lang = "en" if (args.english or args.lang == "en") else "ja"
+    # 設定ファイルの読み込み
+    user_config = load_user_config(args.config_file)
+
+    # 設定表示モード
+    if args.show_config:
+        print(f"設定ファイル: {args.config_file}")
+        print(json.dumps(user_config, ensure_ascii=False, indent=2))
+        return
+
+    # 表示言語の決定 (引数指定 > 保存設定 > ja)
+    if args.english or args.lang == "en":
+        lang = "en"
+    elif args.lang == "ja":
+        lang = "ja"
+    else:
+        lang = "en" if user_config.get("english_mode", False) else "ja"
+
+    within_hours = (
+        args.within_hours
+        if args.within_hours is not None
+        else float(user_config.get("within_hours", 3.0))
+    )
 
     # 劇場一覧の更新モード
     if args.update_theaters:
@@ -600,17 +667,18 @@ def main():
     # 引数から劇場と日付を解決
     input_target = args.target
     input_date = args.date or args.date_arg
+    default_theater = user_config.get("theater", "ebetsu")
 
     # target が日付指定（8桁数字や '明日' 等）である場合
     # 例: `python3 aeoncinema_scraper.py 20261013`
     normalized_target_as_date = normalize_date(input_target)
     if input_target and normalized_target_as_date and (len(normalized_target_as_date) == 8 and normalized_target_as_date.isdigit()):
-        theater_query = "ebetsu"
+        theater_query = default_theater
         extracted_date = normalized_target_as_date
     elif input_target:
         theater_query, extracted_date = parse_target_url(input_target)
     else:
-        theater_query, extracted_date = "ebetsu", None
+        theater_query, extracted_date = default_theater, None
 
     # 劇場の制限チェック (theater.json に含まれるか検証)
     theater_obj, candidates = find_allowed_theater(theater_query, allowed_theaters)
@@ -632,6 +700,21 @@ def main():
         theater_display = f"{theater_name_en} ({theater})"
     else:
         theater_display = f"{theater_obj['name']} ({theater})"
+
+    # 設定の保存モード
+    if args.save_config:
+        new_config = {
+            "theater": theater,
+            "within_hours": within_hours,
+            "english_mode": (lang == "en"),
+            "format": args.format,
+        }
+        save_user_config(new_config, args.config_file)
+        if lang == "en":
+            print(f"Configuration saved to {args.config_file}:")
+        else:
+            print(f"設定を {args.config_file} に保存しました:")
+        print(json.dumps(new_config, ensure_ascii=False, indent=2))
 
     target_date = normalize_date(input_date) or normalize_date(extracted_date)
 
@@ -675,7 +758,7 @@ def main():
             print(f"エラー: {e}", file=sys.stderr)
             sys.exit(1)
 
-        limit_time = base_time + timedelta(hours=args.within_hours)
+        limit_time = base_time + timedelta(hours=within_hours)
 
         # 日付をまたぐ場合は翌日の上映データもマージ
         next_date = limit_time.strftime("%Y%m%d")
@@ -689,17 +772,17 @@ def main():
                 else:
                     movies.append(nm)
 
-        # 3時間以内の作品にフィルタリング
-        movies = filter_upcoming_movies(movies, base_time, args.within_hours)
+        # 指定時間以内の作品にフィルタリング
+        movies = filter_upcoming_movies(movies, base_time, within_hours)
         if lang == "en":
             filter_info = (
                 f"From {base_time.strftime('%Y/%m/%d %H:%M')} to {limit_time.strftime('%H:%M')} "
-                f"(starts within {args.within_hours} hours)"
+                f"(starts within {within_hours} hours)"
             )
         else:
             filter_info = (
                 f"基準時刻 {base_time.strftime('%Y/%m/%d %H:%M')} 〜 {limit_time.strftime('%H:%M')} "
-                f"({args.within_hours}時間以内に開始)"
+                f"({within_hours}時間以内に開始)"
             )
 
     if not movies and not args.upcoming:

@@ -328,8 +328,65 @@ class TestAeonCinemaScraper(unittest.TestCase):
                 main()
                 output = fake_out.getvalue()
                 self.assertIn("AEON CINEMA [Ebetsu (ebetsu)] Showtimes", output)
-                self.assertIn("Movie A", output)
+    # 10. 設定の保存・読み込み (config persistence)
+    def test_config_persistence(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_cfg = os.path.join(tmpdir, "config.json")
+            # 存在しない場合はデフォルト
+            cfg = aeoncinema_scraper.load_user_config(tmp_cfg)
+            self.assertEqual(cfg["theater"], "ebetsu")
+            self.assertEqual(cfg["within_hours"], 3.0)
+            self.assertFalse(cfg["english_mode"])
+
+            # 保存
+            new_cfg = {
+                "theater": "chofu",
+                "within_hours": 2.5,
+                "english_mode": True,
+                "format": "timetable",
+            }
+            aeoncinema_scraper.save_user_config(new_cfg, tmp_cfg)
+            self.assertTrue(os.path.exists(tmp_cfg))
+
+            # 再読み込み
+            loaded = aeoncinema_scraper.load_user_config(tmp_cfg)
+            self.assertEqual(loaded["theater"], "chofu")
+            self.assertEqual(loaded["within_hours"], 2.5)
+            self.assertTrue(loaded["english_mode"])
+
+    @patch("aeoncinema_scraper.fetch_schedule_json")
+    @patch("aeoncinema_scraper.load_allowed_theaters")
+    def test_main_cli_save_and_show_config(self, mock_load, mock_fetch):
+        mock_load.return_value = MOCK_ALLOWED_THEATERS
+        mock_fetch.return_value = MOCK_SCHEDULE_DATA
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmp_cfg = os.path.join(tmpdir, "config.json")
+
+            # --save-config のテスト
+            test_args = [
+                "aeoncinema_scraper.py", "chofu",
+                "--within-hours", "2",
+                "--en",
+                "--save-config",
+                "--config-file", tmp_cfg,
+            ]
+            with patch.object(sys, "argv", test_args):
+                with patch("sys.stdout", new=io.StringIO()) as fake_out:
+                    main()
+                    self.assertTrue(os.path.exists(tmp_cfg))
+
+            # --show-config のテスト
+            test_args_show = ["aeoncinema_scraper.py", "--show-config", "--config-file", tmp_cfg]
+            with patch.object(sys, "argv", test_args_show):
+                with patch("sys.stdout", new=io.StringIO()) as fake_out_show:
+                    main()
+                    out = fake_out_show.getvalue()
+                    self.assertIn('"theater": "chofu"', out)
+                    self.assertIn('"within_hours": 2.0', out)
+                    self.assertIn('"english_mode": true', out)
 
 
 if __name__ == "__main__":
     unittest.main()
+

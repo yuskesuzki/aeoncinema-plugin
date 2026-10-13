@@ -96,7 +96,17 @@ python3 aeoncinema_scraper.py ebetsu --en --format json
 python3 aeoncinema_scraper.py ebetsu --date 20261012 --format csv -o schedule.csv
 ```
 
-### 8. 許可されている劇場一覧の表示と更新
+### 8. 設定の保存と表示（設定の永続化）
+
+```bash
+# デフォルト劇場、抽出時間、英語モードを設定ファイル (~/.config/aeoncinema-plugin/config.json) に保存
+python3 aeoncinema_scraper.py 調布 --within-hours 2 --en --save-config
+
+# 保存されている現在の設定を確認
+python3 aeoncinema_scraper.py --show-config
+```
+
+### 9. 許可されている劇場一覧の表示と更新
 
 ```bash
 # theater.json に登録されている劇場一覧（全国99劇場）を表示
@@ -106,6 +116,35 @@ python3 aeoncinema_scraper.py --list-theaters
 python3 update_theaters.py
 # または
 python3 aeoncinema_scraper.py --update-theaters
+```
+
+---
+
+## Omarchy プラグイン機能
+
+本リポジトリは **Omarchy デスクトップ環境のバーウィジェット（`bar-widget`）** に完全対応しています。
+
+### プラグインUIの機能
+- **トップバー表示**: `🎬 3本`（直近数時間の上映作品数をリアルタイム表示）
+- **劇場選択（Theater Selection）**:
+  - 設定パネルから全国99劇場（`theater.json`）を検索・ワンクリック選択可能
+- **直近作品抽出（Within Hours）**:
+  - `1h` / `2h` / `3h` / `5h` のボタングループで抽出時間をワンタッチ切り替え
+  - 映画タイトル、上映時刻、スクリーン名、残席状況（空席/残りわずか/満席）を表示
+  - カードクリックで公式チケット予約ページを直接ブラウザでオープン
+- **英語モード（English Mode）**:
+  - `JA` / `EN` ボタンでタイトルやUI表示言語を日英切り替え可能
+- **設定の永続化（Settings Persistence）**:
+  - UI上で選択した「劇場」「抽出時間」「英語モード」は Omarchy のシェル設定に自動保持されます。
+  - 同時に `~/.config/aeoncinema-plugin/config.json` にも同期保存されるため、次回起動時やCLI実行時にも設定が引き継がれます。
+
+### プラグインのインストール・配置方法
+```bash
+# プラグインディレクトリを Omarchy のユーザープラグインディレクトリにリンクまたは配置
+ln -s "$(pwd)" ~/.config/omarchy/plugins/com.yusuke.aeoncinema
+
+# プラグインの有効化（トップバー右側に配置）
+omarchy plugin enable com.yusuke.aeoncinema right
 ```
 
 ---
@@ -128,14 +167,19 @@ python3 aeoncinema_scraper.py --update-theaters
 
 | 引数 | 説明 | デフォルト |
 | :--- | :--- | :--- |
-| `target` | 劇場URL、劇場ID、または日付（例: `ebetsu`, `江別`, `20261013`） | 指定の江別URL |
+| `target` | 劇場URL、劇場ID、または日付（例: `ebetsu`, `江別`, `20261013`） | 保存設定 または 江別URL |
 | `date_arg` | 対象日付（第2引数として直接指定可能） | なし |
 | `-d`, `--date` | 対象日付（YYYYMMDD形式、例: `20261012`, `2026-10-12`, `明日`） | URL内の日付 または 当日 |
 | `-u`, `--upcoming` | 現在時刻以降、指定時間以内に開始する作品のみを抽出 | `False` |
-| `--within-hours` | `--upcoming` 時の抽出対象とする時間幅（時間単位） | `3.0` |
+| `--within-hours` | `--upcoming` 時の抽出対象とする時間幅（時間単位） | 保存設定 または `3.0` |
 | `-t`, `--time` | `--upcoming` 時の基準時刻（例: `"20:00"`, `"2026-10-12 20:00"`） | 現在時刻（JST） |
+| `--en`, `--english` | 英語表記モード（タイトルおよびUIを英語化） | 保存設定 または `False` |
+| `--lang` | 表示言語の明示指定 (`ja` または `en`) | 保存設定 または `ja` |
 | `-f`, `--format` | 出力形式 (`text`, `timetable`, `json`, `csv`) | `text` |
 | `-o`, `--output` | 結果の保存先ファイルパス | 標準出力 |
+| `--save-config` | 指定した引数の設定を保存ファイルに永続化 | なし |
+| `--show-config` | 現在保存されている設定内容を表示 | なし |
+| `--config-file` | 設定ファイルパスの指定 | `~/.config/aeoncinema-plugin/config.json` |
 | `-l`, `--list-theaters` | 許可されている全劇場の一覧（都道府県別）を表示 | なし |
 | `--list-dates` | 公開されている全日程一覧のみを表示 | なし |
 | `--update-theaters` | 公式ページから `theater.json` を再取得・更新 | なし |
@@ -145,7 +189,7 @@ python3 aeoncinema_scraper.py --update-theaters
 
 ## ユニットテストの実行
 
-外部通信を行わず、モックを活用した高速・安全なユニットテスト（全15テスト）を用意しています。
+外部通信を行わず、モックを活用した高速・安全なユニットテスト（全21テスト）を用意しています。
 
 ```bash
 # 全テストを実行
