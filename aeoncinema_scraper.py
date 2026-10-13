@@ -165,9 +165,22 @@ def fetch_schedule_json(theater: str) -> Dict[str, Any]:
         raise RuntimeError(f"スケジュールデータの取得に失敗しました: {e}") from e
 
 
-def parse_schedule_for_date(raw_data: Dict[str, Any], date_str: str) -> List[Dict[str, Any]]:
+def to_english_screen(screen_name: str) -> str:
+    """スクリーン名を英語表記（例: 'Screen 1'）に変換する"""
+    m = re.search(r"スクリーン\s*(\d+)", screen_name)
+    if m:
+        return f"Screen {m.group(1)}"
+    if "未定" in screen_name:
+        return "TBD"
+    return screen_name
+
+
+def parse_schedule_for_date(
+    raw_data: Dict[str, Any], date_str: str, lang: str = "ja"
+) -> List[Dict[str, Any]]:
     """
     指定日のスケジュールデータをパースして、作品ごとの上映情報リストを作成する。
+    lang='en' の場合は英語タイトル（未設定時は日本語タイトル）および英語表記のスクリーン名を優先して設定する。
     """
     day_schedules = raw_data.get(date_str)
     if not day_schedules:
@@ -180,7 +193,7 @@ def parse_schedule_for_date(raw_data: Dict[str, Any], date_str: str) -> List[Dic
             continue
         
         first_event = events[0]
-        title = (
+        title_ja = (
             first_event.get("name", {}).get("ja")
             or first_event.get("superEvent", {}).get("name", {}).get("ja")
             or "名称未設定"
@@ -190,6 +203,8 @@ def parse_schedule_for_date(raw_data: Dict[str, Any], date_str: str) -> List[Dic
             or first_event.get("superEvent", {}).get("name", {}).get("en")
             or ""
         )
+
+        display_title = (title_en if title_en else title_ja) if lang == "en" else title_ja
 
         showtimes: List[Dict[str, Any]] = []
         for ev in events:
@@ -210,6 +225,9 @@ def parse_schedule_for_date(raw_data: Dict[str, Any], date_str: str) -> List[Dic
                 end_time = "--:--"
 
             screen_name = ev.get("location", {}).get("name", {}).get("ja", "スクリーン未定")
+            if lang == "en":
+                screen_name = to_english_screen(screen_name)
+
             max_capacity = ev.get("maximumAttendeeCapacity")
             rem_capacity = ev.get("remainingAttendeeCapacity")
 
@@ -227,13 +245,14 @@ def parse_schedule_for_date(raw_data: Dict[str, Any], date_str: str) -> List[Dic
         showtimes.sort(key=lambda s: s["start_time"])
 
         movies.append({
-            "title": title,
+            "title": display_title,
+            "title_ja": title_ja,
             "title_en": title_en,
             "showtimes": showtimes,
         })
 
-    # タイトル順にソート
-    movies.sort(key=lambda m: m["title"])
+    # タイトル順にソート (大文字小文字を区別せず)
+    movies.sort(key=lambda m: m["title"].lower())
     return movies
 
 
@@ -263,7 +282,7 @@ def filter_upcoming_movies(
             movie_copy["showtimes"] = matching_showtimes
             filtered_movies.append(movie_copy)
 
-    filtered_movies.sort(key=lambda m: m["title"])
+    filtered_movies.sort(key=lambda m: m["title"].lower())
     return filtered_movies
 
 
@@ -272,9 +291,34 @@ def format_text(
     date_str: str,
     movies: List[Dict[str, Any]],
     filter_info: Optional[str] = None,
+    lang: str = "ja",
 ) -> str:
     """映画タイトルごとに上映時間をグループ化したテキスト形式"""
     formatted_date = f"{date_str[:4]}/{date_str[4:6]}/{date_str[6:]}" if len(date_str) == 8 else date_str
+    if lang == "en":
+        lines = [
+            f"============================================================",
+            f" AEON CINEMA [{theater}] Showtimes ({formatted_date})",
+        ]
+        if filter_info:
+            lines.append(f" [Filter: {filter_info}]")
+        lines.append(f" Total Movies: {len(movies)}")
+        lines.append(f"============================================================")
+
+        if not movies:
+            lines.append("\n* No showtimes found matching the criteria.")
+            return "\n".join(lines)
+
+        for m in movies:
+            lines.append(f"\n■ {m['title']}")
+            for s in m["showtimes"]:
+                seat_info = ""
+                if s["remaining_seats"] is not None and s["total_seats"] is not None:
+                    seat_info = f" [Seats: {s['remaining_seats']}/{s['total_seats']}]"
+                lines.append(f"   - {s['start_time']} - {s['end_time']}  ({s['screen']}){seat_info}")
+
+        return "\n".join(lines)
+
     lines = [
         f"============================================================",
         f" イオンシネマ【{theater}】上映スケジュール ({formatted_date})",
@@ -304,6 +348,7 @@ def format_timetable(
     date_str: str,
     movies: List[Dict[str, Any]],
     filter_info: Optional[str] = None,
+    lang: str = "ja",
 ) -> str:
     """開始時刻順のタイムテーブル形式"""
     formatted_date = f"{date_str[:4]}/{date_str[4:6]}/{date_str[6:]}" if len(date_str) == 8 else date_str
@@ -320,6 +365,31 @@ def format_timetable(
             })
 
     all_slots.sort(key=lambda x: (x["start_time"], x["screen"]))
+
+    if lang == "en":
+        lines = [
+            f"============================================================",
+            f" AEON CINEMA [{theater}] Timetable ({formatted_date})",
+        ]
+        if filter_info:
+            lines.append(f" [Filter: {filter_info}]")
+        lines.append(f" Total Showtimes: {len(all_slots)}")
+        lines.append(f"============================================================")
+
+        if not all_slots:
+            lines.append("* No showtimes found matching the criteria.")
+            return "\n".join(lines)
+
+        lines.extend([
+            f"{'Time':<15} | {'Screen':<10} | {'Title'}",
+            "-" * 60,
+        ])
+
+        for slot in all_slots:
+            time_str = f"{slot['start_time']} - {slot['end_time']}"
+            lines.append(f"{time_str:<15} | {slot['screen']:<10} | {slot['title']}")
+
+        return "\n".join(lines)
 
     lines = [
         f"============================================================",
@@ -346,11 +416,15 @@ def format_timetable(
     return "\n".join(lines)
 
 
-def format_csv(movies: List[Dict[str, Any]]) -> str:
+def format_csv(movies: List[Dict[str, Any]], lang: str = "ja") -> str:
     """CSV形式"""
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["タイトル", "開始時刻", "終了時刻", "スクリーン", "残席数", "総座席数"])
+    if lang == "en":
+        writer.writerow(["Title", "Start Time", "End Time", "Screen", "Available Seats", "Total Seats"])
+    else:
+        writer.writerow(["タイトル", "開始時刻", "終了時刻", "スクリーン", "残席数", "総座席数"])
+
     for m in movies:
         for s in m["showtimes"]:
             writer.writerow([
@@ -457,6 +531,18 @@ def main():
         help="基準時刻 (例: '21:00' または '2026-10-12 21:00'。未指定時は現在時刻)",
     )
     parser.add_argument(
+        "--lang",
+        choices=["ja", "en"],
+        default="ja",
+        help="表示言語 (ja: 日本語, en: 英語, デフォルト: ja)",
+    )
+    parser.add_argument(
+        "--en", "--english",
+        action="store_true",
+        dest="english",
+        help="英語表記モード (--lang en と同等)",
+    )
+    parser.add_argument(
         "-f", "--format",
         choices=["text", "json", "csv", "timetable"],
         default="text",
@@ -489,6 +575,9 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # 表示言語の決定
+    lang = "en" if (args.english or args.lang == "en") else "ja"
 
     # 劇場一覧の更新モード
     if args.update_theaters:
@@ -538,7 +627,12 @@ def main():
         sys.exit(1)
 
     theater = theater_obj["id"]
-    theater_display = f"{theater_obj['name']} ({theater})"
+    theater_name_en = theater_obj["id"].capitalize()
+    if lang == "en":
+        theater_display = f"{theater_name_en} ({theater})"
+    else:
+        theater_display = f"{theater_obj['name']} ({theater})"
+
     target_date = normalize_date(input_date) or normalize_date(extracted_date)
 
     # スケジュールJSONを取得
@@ -571,7 +665,7 @@ def main():
             sys.exit(1)
 
     # データのパース
-    movies = parse_schedule_for_date(raw_data, target_date)
+    movies = parse_schedule_for_date(raw_data, target_date, lang=lang)
 
     filter_info: Optional[str] = None
     if args.upcoming:
@@ -586,7 +680,7 @@ def main():
         # 日付をまたぐ場合は翌日の上映データもマージ
         next_date = limit_time.strftime("%Y%m%d")
         if next_date != target_date and next_date in raw_data:
-            next_movies = parse_schedule_for_date(raw_data, next_date)
+            next_movies = parse_schedule_for_date(raw_data, next_date, lang=lang)
             # 同一タイトルの映画があれば showtimes を結合、なければ追加
             movies_by_title = {m["title"]: m for m in movies}
             for nm in next_movies:
@@ -597,37 +691,51 @@ def main():
 
         # 3時間以内の作品にフィルタリング
         movies = filter_upcoming_movies(movies, base_time, args.within_hours)
-        filter_info = (
-            f"基準時刻 {base_time.strftime('%Y/%m/%d %H:%M')} 〜 {limit_time.strftime('%H:%M')} "
-            f"({args.within_hours}時間以内に開始)"
-        )
+        if lang == "en":
+            filter_info = (
+                f"From {base_time.strftime('%Y/%m/%d %H:%M')} to {limit_time.strftime('%H:%M')} "
+                f"(starts within {args.within_hours} hours)"
+            )
+        else:
+            filter_info = (
+                f"基準時刻 {base_time.strftime('%Y/%m/%d %H:%M')} 〜 {limit_time.strftime('%H:%M')} "
+                f"({args.within_hours}時間以内に開始)"
+            )
 
     if not movies and not args.upcoming:
-        print(
-            f"警告: {target_date} の上映スケジュールは見つかりませんでした。\n"
-            f"現在公開されている日程: {', '.join(available_dates)}",
-            file=sys.stderr,
-        )
+        if lang == "en":
+            print(
+                f"Warning: No showtimes found for {target_date}.\n"
+                f"Available dates: {', '.join(available_dates)}",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"警告: {target_date} の上映スケジュールは見つかりませんでした。\n"
+                f"現在公開されている日程: {', '.join(available_dates)}",
+                file=sys.stderr,
+            )
         sys.exit(1)
 
     # フォーマット生成
     if args.format == "json":
         result_payload = {
             "theater": theater,
-            "theater_name": theater_obj["name"],
+            "theater_name": theater_name_en if lang == "en" else theater_obj["name"],
             "area": theater_obj.get("area", ""),
             "date": target_date,
+            "language": lang,
             "movies": movies,
         }
         if filter_info:
             result_payload["filter"] = filter_info
         result_text = json.dumps(result_payload, ensure_ascii=False, indent=2)
     elif args.format == "csv":
-        result_text = format_csv(movies)
+        result_text = format_csv(movies, lang=lang)
     elif args.format == "timetable":
-        result_text = format_timetable(theater_display, target_date, movies, filter_info=filter_info)
+        result_text = format_timetable(theater_display, target_date, movies, filter_info=filter_info, lang=lang)
     else:
-        result_text = format_text(theater_display, target_date, movies, filter_info=filter_info)
+        result_text = format_text(theater_display, target_date, movies, filter_info=filter_info, lang=lang)
 
     # 出力
     if args.output_file:

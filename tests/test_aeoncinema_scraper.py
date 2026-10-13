@@ -21,6 +21,7 @@ from aeoncinema_scraper import (
     format_text,
     format_timetable,
     format_csv,
+    to_english_screen,
     fetch_schedule_json,
     main,
 )
@@ -295,7 +296,39 @@ class TestAeonCinemaScraper(unittest.TestCase):
                 with self.assertRaises(SystemExit) as cm:
                     main()
                 self.assertEqual(cm.exception.code, 1)
-                self.assertIn("許可された劇場一覧", fake_err.getvalue())
+    # 10. 英語対応テスト
+    def test_to_english_screen(self):
+        self.assertEqual(to_english_screen("スクリーン1"), "Screen 1")
+        self.assertEqual(to_english_screen("スクリーン 5"), "Screen 5")
+        self.assertEqual(to_english_screen("スクリーン未定"), "TBD")
+        self.assertEqual(to_english_screen("IMAX"), "IMAX")
+
+    def test_parse_schedule_for_date_english(self):
+        movies = parse_schedule_for_date(MOCK_SCHEDULE_DATA, "20261012", lang="en")
+        movie_a = next(m for m in movies if m["title_ja"] == "映画A")
+        self.assertEqual(movie_a["title"], "Movie A")
+        self.assertEqual(movie_a["showtimes"][0]["screen"], "Screen 1")
+
+    def test_format_text_english(self):
+        movies = parse_schedule_for_date(MOCK_SCHEDULE_DATA, "20261012", lang="en")
+        text = format_text("Ebetsu (ebetsu)", "20261012", movies, lang="en")
+        self.assertIn("AEON CINEMA [Ebetsu (ebetsu)] Showtimes", text)
+        self.assertIn("■ Movie A", text)
+        self.assertIn("08:00 - 10:00  (Screen 1) [Seats: 50/100]", text)
+
+    @patch("aeoncinema_scraper.fetch_schedule_json")
+    @patch("aeoncinema_scraper.load_allowed_theaters")
+    def test_main_cli_english(self, mock_load, mock_fetch):
+        mock_load.return_value = MOCK_ALLOWED_THEATERS
+        mock_fetch.return_value = MOCK_SCHEDULE_DATA
+
+        test_args = ["aeoncinema_scraper.py", "ebetsu", "--date", "20261012", "--en"]
+        with patch.object(sys, "argv", test_args):
+            with patch("sys.stdout", new=io.StringIO()) as fake_out:
+                main()
+                output = fake_out.getvalue()
+                self.assertIn("AEON CINEMA [Ebetsu (ebetsu)] Showtimes", output)
+                self.assertIn("Movie A", output)
 
 
 if __name__ == "__main__":

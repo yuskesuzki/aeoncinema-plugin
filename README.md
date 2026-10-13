@@ -75,7 +75,22 @@ python3 aeoncinema_scraper.py ebetsu --format timetable
 python3 aeoncinema_scraper.py ebetsu --date 20261012 --format json
 ```
 
-### 6. CSVファイルに保存
+### 7. 英語表記モード（--en / --lang en）
+
+英語話者向けに、映画タイトル（英語タイトル・ローマ字表記）、スクリーン名（Screen 1 等）、座席情報、各種ヘッダーを英語で出力します。
+
+```bash
+# 英語表記でテキスト表示
+python3 aeoncinema_scraper.py ebetsu --en
+
+# 英語表記でタイムテーブル表示
+python3 aeoncinema_scraper.py ebetsu --en --format timetable
+
+# 英語表記でJSON出力
+python3 aeoncinema_scraper.py ebetsu --en --format json
+```
+
+### 8. CSVファイルに保存
 
 ```bash
 python3 aeoncinema_scraper.py ebetsu --date 20261012 --format csv -o schedule.csv
