@@ -139,13 +139,32 @@ python3 aeoncinema_scraper.py --update-theaters
   - 同時に `~/.config/aeoncinema-plugin/config.json` にも同期保存されるため、次回起動時やCLI実行時にも設定が引き継がれます。
 
 ### プラグインのインストール・配置方法
+
+#### 方法 A: Omarchy コマンドによる追加（推奨）
 ```bash
-# プラグインディレクトリを Omarchy のユーザープラグインディレクトリにリンクまたは配置
+# リポジトリから直接追加して有効化
+omarchy plugin add https://github.com/yuskesuzki/aeoncinema-plugin.git --enable
+```
+
+#### 方法 B: ローカル開発ディレクトリからの手動配置
+```bash
+# プラグインディレクトリを Omarchy のユーザープラグインディレクトリにリンク
 ln -s "$(pwd)" ~/.config/omarchy/plugins/com.yusuke.aeoncinema
 
 # プラグインの有効化（トップバー右側に配置）
 omarchy plugin enable com.yusuke.aeoncinema right
 ```
+
+### プラグインのアンインストール・削除方法
+```bash
+# プラグインの削除
+omarchy plugin remove com.yusuke.aeoncinema
+```
+
+### 依存関係 (Dependencies)
+- **Python 3.9 以上**
+- Python 標準ライブラリのみを使用（`urllib`, `json`, `datetime` 等）。追加の pip パッケージのインストールは不要です。
+- **Quickshell** / **Omarchy** デスクトップ環境
 
 ---
 
@@ -199,3 +218,10 @@ python3 -m unittest discover tests
 python3 -m unittest -v tests/test_aeoncinema_scraper.py
 python3 -m unittest -v tests/test_update_theaters.py
 ```
+
+---
+
+## ライセンス (License)
+
+本ソフトウェアは [MIT License](LICENSE) の下で公開されています。詳細は [LICENSE](LICENSE) ファイルをご参照ください。
+
