@@ -263,6 +263,13 @@ def parse_schedule_for_date(
             max_capacity = ev.get("maximumAttendeeCapacity")
             rem_capacity = ev.get("remainingAttendeeCapacity")
 
+            event_id = ev.get("id") or ev.get("offers", {}).get("itemOffered", {}).get("id")
+            booking_url = (
+                f"https://login.watatheatre.aeoncinema.com/login2?eventId={event_id}"
+                if event_id
+                else None
+            )
+
             showtimes.append({
                 "start_time": start_time,
                 "end_time": end_time,
@@ -271,20 +278,34 @@ def parse_schedule_for_date(
                 "screen": screen_name,
                 "remaining_seats": rem_capacity,
                 "total_seats": max_capacity,
+                "event_id": event_id,
+                "booking_url": booking_url,
             })
 
         # 開始時刻順にソート
         showtimes.sort(key=lambda s: s["start_time"])
 
+        first_booking_url = None
+        for st in showtimes:
+            if st.get("booking_url"):
+                first_booking_url = st["booking_url"]
+                break
+
         movies.append({
             "title": display_title,
             "title_ja": title_ja,
             "title_en": title_en,
+            "booking_url": first_booking_url,
             "showtimes": showtimes,
         })
 
-    # タイトル順にソート (大文字小文字を区別せず)
-    movies.sort(key=lambda m: m["title"].lower())
+    # 各作品の中で最も早い上映開始時刻順にソート (開始時刻が同一の場合はタイトル順)
+    movies.sort(
+        key=lambda m: (
+            m["showtimes"][0]["start_time"] if m.get("showtimes") else "99:99",
+            m["title"].lower(),
+        )
+    )
     return movies
 
 
@@ -314,7 +335,12 @@ def filter_upcoming_movies(
             movie_copy["showtimes"] = matching_showtimes
             filtered_movies.append(movie_copy)
 
-    filtered_movies.sort(key=lambda m: m["title"].lower())
+    filtered_movies.sort(
+        key=lambda m: (
+            m["showtimes"][0]["start_time"] if m.get("showtimes") else "99:99",
+            m["title"].lower(),
+        )
+    )
     return filtered_movies
 
 
@@ -483,6 +509,8 @@ def normalize_date(date_str: Optional[str]) -> Optional[str]:
     if not date_str:
         return None
     s = date_str.strip()
+    if s.lower() in ("yesterday", "昨日"):
+        return (datetime.now(JST) - timedelta(days=1)).strftime("%Y%m%d")
     if s.lower() in ("today", "今日"):
         return datetime.now(JST).strftime("%Y%m%d")
     if s.lower() in ("tomorrow", "明日"):
@@ -786,6 +814,29 @@ def main():
             )
 
     if not movies and not args.upcoming:
+        if args.format == "json":
+            result_payload = {
+                "theater": theater,
+                "theater_name": theater_name_en if lang == "en" else theater_obj["name"],
+                "area": theater_obj.get("area", ""),
+                "date": target_date,
+                "language": lang,
+                "movies": [],
+                "available_dates": available_dates,
+                "message": (
+                    f"No showtimes found for {target_date}."
+                    if lang == "en"
+                    else f"{target_date} の上映スケジュールは見つかりませんでした。"
+                ),
+            }
+            result_text = json.dumps(result_payload, ensure_ascii=False, indent=2)
+            if args.output_file:
+                with open(args.output_file, "w", encoding="utf-8") as f:
+                    f.write(result_text + "\n")
+            else:
+                print(result_text)
+            return
+
         if lang == "en":
             print(
                 f"Warning: No showtimes found for {target_date}.\n"

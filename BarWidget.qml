@@ -13,12 +13,14 @@ BarWidget {
   property string selectedTheater: String(root.setting("theater", "ebetsu"))
   property real withinHours: Number(root.setting("withinHours", 3.0))
   property bool englishMode: Boolean(root.setting("englishMode", false))
+  property string selectedDate: "today" // "yesterday", "today", "tomorrow"
 
   property string theaterDisplayName: "江別"
   property var moviesData: []
   property var allTheaters: []
   property bool loading: false
   property string errorMessage: ""
+  property string payloadMessage: ""
   property bool popupOpen: false
   property bool showSettingsPanel: false
   property string theaterSearchText: ""
@@ -37,35 +39,52 @@ BarWidget {
 
   readonly property string barTooltipText: {
     var title = englishMode ? "Aeon Cinema" : "イオンシネマ"
-    return title + " - " + theaterDisplayName + " (" + (englishMode ? (withinHours + "h window") : (withinHours + "時間以内")) + ")"
+    var dateLabel = selectedDate === "yesterday" ? (englishMode ? "Yesterday" : "昨日") : (selectedDate === "tomorrow" ? (englishMode ? "Tomorrow" : "明日") : (englishMode ? (withinHours + "h window") : (withinHours + "時間以内")))
+    return title + " - " + theaterDisplayName + " (" + dateLabel + ")"
+  }
+
+  function buildFetchCommand() {
+    var cmd = [
+      "python3",
+      root.scriptPath,
+      root.selectedTheater,
+      "--format",
+      "json",
+      root.englishMode ? "--en" : "--lang=ja"
+    ]
+    if (root.selectedDate === "tomorrow") {
+      cmd.push("-d", "明日")
+    } else {
+      cmd.push("--upcoming", "--within-hours", String(root.withinHours))
+    }
+    return cmd
   }
 
   // 劇場データの読み込み (Process)
   Process {
     id: fetchProcess
     running: false
-    command: [
-      "python3",
-      root.scriptPath,
-      root.selectedTheater,
-      "--upcoming",
-      "--within-hours",
-      String(root.withinHours),
-      "--format",
-      "json",
-      root.englishMode ? "--en" : "--lang=ja"
-    ]
+    command: root.buildFetchCommand()
 
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
         root.loading = false
         root.errorMessage = ""
+        root.payloadMessage = ""
         try {
           var payload = JSON.parse(text)
           root.theaterDisplayName = payload.theater_name || payload.theater || root.selectedTheater
-          root.moviesData = payload.movies || []
-          console.log("[AeonCinema] Successfully fetched " + root.moviesData.length + " movies for " + root.theaterDisplayName)
+          var movies = payload.movies || []
+          movies.sort(function(a, b) {
+            var timeA = (a.showtimes && a.showtimes.length > 0) ? a.showtimes[0].start_time : "99:99"
+            var timeB = (b.showtimes && b.showtimes.length > 0) ? b.showtimes[0].start_time : "99:99"
+            if (timeA !== timeB) return timeA.localeCompare(timeB)
+            return (a.title || "").localeCompare(b.title || "")
+          })
+          root.moviesData = movies
+          root.payloadMessage = payload.message || ""
+          console.log("[AeonCinema] Successfully fetched " + root.moviesData.length + " movies for " + root.theaterDisplayName + " (" + root.selectedDate + ")")
         } catch (e) {
           console.error("[AeonCinema] JSON parse error: " + e.message)
           root.errorMessage = root.englishMode ? "Failed to parse schedule" : "スケジュールの解析に失敗しました"
@@ -130,17 +149,7 @@ BarWidget {
   function refresh() {
     if (!fetchProcess.running) {
       loading = true
-      fetchProcess.command = [
-        "python3",
-        root.scriptPath,
-        root.selectedTheater,
-        "--upcoming",
-        "--within-hours",
-        String(root.withinHours),
-        "--format",
-        "json",
-        root.englishMode ? "--en" : "--lang=ja"
-      ]
+      fetchProcess.command = root.buildFetchCommand()
       fetchProcess.running = true
     }
   }
@@ -252,8 +261,8 @@ BarWidget {
     bar: root.bar
     owner: root
     open: root.popupOpen
-    contentWidth: popup.fittedContentWidth(Style.space(420))
-    contentHeight: popup.fittedContentHeight(mainColumn.implicitHeight, Style.space(560))
+    contentWidth: popup.fittedContentWidth(Style.space(440))
+    contentHeight: popup.fittedContentHeight(mainColumn.implicitHeight, Style.space(580))
 
     onOpenChanged: {
       if (root.popupOpen !== open) {
@@ -270,33 +279,64 @@ BarWidget {
       RowLayout {
         width: parent.width
 
-        RowLayout {
-          spacing: Style.space(6)
-          Text {
-            text: "🎬"
-            font.pixelSize: Style.font ? Style.font.title : 16
-          }
-          Text {
-            text: root.englishMode ? "AEON CINEMA" : "イオンシネマ"
-            color: root.bar ? root.bar.foreground : Color.foreground
-            font.pixelSize: Style.font ? Style.font.title : 16
-            font.bold: true
-          }
-          // 劇場名バッジ
-          Rectangle {
-            radius: Style.space(4)
-            color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.15)
-            implicitWidth: theaterLabel.implicitWidth + Style.space(10)
-            implicitHeight: theaterLabel.implicitHeight + Style.space(4)
+        // タイトル & 劇場名 (クリックで劇場公式HPへ移動)
+        Rectangle {
+          radius: Style.space(6)
+          color: titleHover.containsMouse ? Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.08) : "transparent"
+          implicitWidth: titleRow.implicitWidth + Style.space(10)
+          implicitHeight: titleRow.implicitHeight + Style.space(6)
+
+          RowLayout {
+            id: titleRow
+            anchors.centerIn: parent
+            spacing: Style.space(6)
 
             Text {
-              id: theaterLabel
-              anchors.centerIn: parent
-              text: root.theaterDisplayName
+              text: "🎬"
+              font.pixelSize: Style.font ? Style.font.title : 16
+            }
+            Text {
+              text: root.englishMode ? "AEON CINEMA" : "イオンシネマ"
               color: root.bar ? root.bar.foreground : Color.foreground
-              font.pixelSize: Style.font ? Style.font.caption : 11
+              font.pixelSize: Style.font ? Style.font.title : 16
               font.bold: true
             }
+            // 劇場名バッジ
+            Rectangle {
+              radius: Style.space(4)
+              color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.15)
+              implicitWidth: theaterLabel.implicitWidth + Style.space(10)
+              implicitHeight: theaterLabel.implicitHeight + Style.space(4)
+
+              Text {
+                id: theaterLabel
+                anchors.centerIn: parent
+                text: root.theaterDisplayName
+                color: root.bar ? root.bar.foreground : Color.foreground
+                font.pixelSize: Style.font ? Style.font.caption : 11
+                font.bold: true
+              }
+            }
+            Text {
+              text: "↗"
+              color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.45)
+              font.pixelSize: Style.font ? Style.font.caption : 10
+            }
+          }
+
+          MouseArea {
+            id: titleHover
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+              var url = "https://theater.aeoncinema.com/theaters/" + root.selectedTheater + "/"
+              if (root.bar && typeof root.bar.run === "function") {
+                root.bar.run("xdg-open '" + url + "'")
+              }
+            }
+            onEntered: if (root.bar) root.bar.showTooltip(parent, root.englishMode ? "Open theater website" : (root.theaterDisplayName + " の公式ホームページを開く"))
+            onExited: if (root.bar) root.bar.hideTooltip(parent)
           }
         }
 
@@ -368,7 +408,49 @@ BarWidget {
         }
       }
 
-      // 2. 設定パネル (アコーディオン表示)
+      // 2. 日付切替セレクター (昨日 / 今日 / 明日)
+      RowLayout {
+        width: parent.width
+        spacing: Style.space(6)
+
+        Repeater {
+          model: [
+            { id: "today",     labelJa: "今日", labelEn: "Today" },
+            { id: "tomorrow",  labelJa: "明日", labelEn: "Tomorrow" }
+          ]
+
+          delegate: Rectangle {
+            Layout.fillWidth: true
+            radius: Style.space(4)
+            property bool isSelected: root.selectedDate === modelData.id
+            color: isSelected ? Color.accent : Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.08)
+            border.color: isSelected ? Color.accent : Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.15)
+            border.width: 1
+            implicitHeight: Style.space(26)
+
+            Text {
+              anchors.centerIn: parent
+              text: root.englishMode ? modelData.labelEn : modelData.labelJa
+              color: parent.isSelected ? Color.background : (root.bar ? root.bar.foreground : Color.foreground)
+              font.pixelSize: Style.font ? Style.font.caption : 11
+              font.bold: parent.isSelected
+            }
+
+            MouseArea {
+              anchors.fill: parent
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                if (root.selectedDate !== modelData.id) {
+                  root.selectedDate = modelData.id
+                  root.refresh()
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 3. 設定パネル (アコーディオン表示)
       Rectangle {
         width: parent.width
         visible: root.showSettingsPanel
@@ -475,10 +557,11 @@ BarWidget {
             }
           }
 
-          // 時間範囲選択 (Within Hours)
+          // 時間範囲選択 (Within Hours - 今日選択時のみ有効)
           RowLayout {
             width: parent.width
             spacing: Style.space(8)
+            visible: root.selectedDate === "today"
 
             Text {
               text: root.englishMode ? "Within:" : "抽出範囲:"
@@ -522,11 +605,17 @@ BarWidget {
         }
       }
 
-      // 3. 上映時間・作品一覧ヘッダー
+      // 4. 上映時間・作品一覧ヘッダー
       RowLayout {
         width: parent.width
         Text {
-          text: root.englishMode ? ("Upcoming in " + root.withinHours + " hours:") : ("直近 " + root.withinHours + " 時間の上映作品:")
+          text: {
+            if (root.selectedDate === "tomorrow") {
+              return root.englishMode ? "Tomorrow's Showtimes:" : "明日の上映作品一覧:"
+            } else {
+              return root.englishMode ? ("Upcoming in " + root.withinHours + " hours:") : ("直近 " + root.withinHours + " 時間の上映作品:")
+            }
+          }
           color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.7)
           font.pixelSize: Style.font ? Style.font.caption : 12
           font.bold: true
@@ -550,17 +639,17 @@ BarWidget {
         font.pixelSize: Style.font ? Style.font.caption : 12
       }
 
-      // 4. 上映作品リスト
+      // 5. 上映作品リスト
       Flickable {
         width: parent.width
-        height: Math.min(Style.space(340), movieColumn.implicitHeight)
+        height: Math.min(Style.space(360), movieColumn.implicitHeight)
         contentHeight: movieColumn.implicitHeight
         clip: true
 
         // 作品が0件の場合
         Item {
           width: parent.width
-          height: Style.space(100)
+          height: Style.space(110)
           visible: !root.loading && root.moviesData.length === 0 && root.errorMessage === ""
 
           Column {
@@ -573,7 +662,14 @@ BarWidget {
             }
             Text {
               anchors.horizontalCenter: parent.horizontalCenter
-              text: root.englishMode ? "No upcoming showtimes within window" : "直近の上映作品はありません"
+              text: {
+                if (root.payloadMessage) return root.payloadMessage
+                if (root.selectedDate === "tomorrow") {
+                  return root.englishMode ? "No showtimes available for tomorrow" : "明日の上映作品はありません"
+                } else {
+                  return root.englishMode ? "No upcoming showtimes within window" : "直近の上映作品はありません"
+                }
+              }
               color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.6)
               font.pixelSize: Style.font ? Style.font.body : 12
             }
@@ -600,16 +696,56 @@ BarWidget {
                 id: cardInner
                 anchors.fill: parent
                 anchors.margins: Style.space(8)
-                spacing: Style.space(6)
+                spacing: Style.space(8)
 
-                // 作品タイトル
-                Text {
+                // 作品タイトル & 予約ボタン
+                RowLayout {
                   width: parent.width
-                  text: modelData.title
-                  color: root.bar ? root.bar.foreground : Color.foreground
-                  font.pixelSize: Style.font ? Style.font.body : 13
-                  font.bold: true
-                  wrapMode: Text.WordWrap
+                  spacing: Style.space(8)
+
+                  Text {
+                    Layout.fillWidth: true
+                    text: modelData.title
+                    color: root.bar ? root.bar.foreground : Color.foreground
+                    font.pixelSize: Style.font ? Style.font.body : 13
+                    font.bold: true
+                    wrapMode: Text.WordWrap
+                  }
+
+                  // 作品ごとのチケット予約ボタン (直近回へリンク)
+                  Rectangle {
+                    visible: Boolean(modelData.booking_url)
+                    radius: Style.space(4)
+                    color: bookBtnHover.containsMouse ? Color.accent : Util.alpha(Color.accent, 0.85)
+                    implicitWidth: bookBtnTxt.implicitWidth + Style.space(10)
+                    implicitHeight: Style.space(22)
+                    z: 2
+
+                    Text {
+                      id: bookBtnTxt
+                      anchors.centerIn: parent
+                      text: root.englishMode ? "🎟️ Book" : "🎟️ 予約購入"
+                      color: Color.background
+                      font.pixelSize: Style.font ? Style.font.caption : 10
+                      font.bold: true
+                    }
+
+                    MouseArea {
+                      id: bookBtnHover
+                      anchors.fill: parent
+                      hoverEnabled: true
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: function(mouse) {
+                        mouse.accepted = true
+                        var url = modelData.booking_url
+                        if (url && root.bar && typeof root.bar.run === "function") {
+                          root.bar.run("xdg-open '" + url + "'")
+                        }
+                      }
+                      onEntered: if (root.bar) root.bar.showTooltip(parent, root.englishMode ? "Book ticket on official Watatheatre site" : "ワタシアター予約購入ページを開く")
+                      onExited: if (root.bar) root.bar.hideTooltip(parent)
+                    }
+                  }
                 }
 
                 // 上映回リスト
@@ -669,18 +805,41 @@ BarWidget {
                         font.pixelSize: Style.font ? Style.font.caption : 10
                       }
                     }
-                  }
-                }
-              }
 
-              // クリックで劇場の公式スケジュールページを開く
-              MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                  var url = "https://theater.aeoncinema.com/theaters/" + root.selectedTheater + "/"
-                  if (root.bar && typeof root.bar.run === "function") {
-                    root.bar.run("xdg-open '" + url + "'")
+                    // 上映回ごとのチケット予約ボタン
+                    Rectangle {
+                      visible: Boolean(modelData.booking_url)
+                      radius: Style.space(4)
+                      color: stBookHover.containsMouse ? Util.alpha(Color.accent, 0.35) : Util.alpha(Color.accent, 0.15)
+                      border.color: Util.alpha(Color.accent, 0.4)
+                      border.width: 1
+                      implicitWidth: stBookTxt.implicitWidth + Style.space(8)
+                      implicitHeight: Style.space(20)
+                      z: 2
+
+                      Text {
+                        id: stBookTxt
+                        anchors.centerIn: parent
+                        text: "🎟️"
+                        font.pixelSize: Style.font ? Style.font.caption : 10
+                      }
+
+                      MouseArea {
+                        id: stBookHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: function(mouse) {
+                          mouse.accepted = true
+                          var url = modelData.booking_url
+                          if (url && root.bar && typeof root.bar.run === "function") {
+                            root.bar.run("xdg-open '" + url + "'")
+                          }
+                        }
+                        onEntered: if (root.bar) root.bar.showTooltip(parent, root.englishMode ? ("Book ticket for " + modelData.start_time) : (modelData.start_time + " のチケットを予約購入"))
+                        onExited: if (root.bar) root.bar.hideTooltip(parent)
+                      }
+                    }
                   }
                 }
               }

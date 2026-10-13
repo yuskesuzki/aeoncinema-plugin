@@ -64,15 +64,18 @@ MOCK_SCHEDULE_DATA = {
                 "maximumAttendeeCapacity": 100,
                 "remainingAttendeeCapacity": 50,
                 "location": {"branchCode": "01", "name": {"ja": "スクリーン1"}},
+                "offers": {"itemOffered": {"id": "ev_test_1"}},
             },
             {
                 "id": "event_2",
                 "name": {"ja": "映画A", "en": "Movie A"},
                 "startDate": "2026-10-12T04:00:00.000Z",  # JST: 2026-10-12 13:00
                 "endDate": "2026-10-12T06:00:00.000Z",    # JST: 2026-10-12 15:00
+                "doorTime": "2026-10-12T03:45:00.000Z",
                 "maximumAttendeeCapacity": 100,
                 "remainingAttendeeCapacity": 10,
                 "location": {"branchCode": "01", "name": {"ja": "スクリーン1"}},
+                "offers": {"itemOffered": {"id": "ev_test_2"}},
             },
         ],
         "movie_grp_2": [
@@ -84,6 +87,7 @@ MOCK_SCHEDULE_DATA = {
                 "maximumAttendeeCapacity": 150,
                 "remainingAttendeeCapacity": 80,
                 "location": {"branchCode": "02", "name": {"ja": "スクリーン2"}},
+                "offers": {"itemOffered": {"id": "ev_test_3"}},
             }
         ],
     }
@@ -120,9 +124,12 @@ class TestAeonCinemaScraper(unittest.TestCase):
         self.assertEqual(normalize_date("2026-10-13"), "20261013")
         self.assertEqual(normalize_date("2026/10/13"), "20261013")
 
+        yesterday_str = (datetime.now(JST) - timedelta(days=1)).strftime("%Y%m%d")
         today_str = datetime.now(JST).strftime("%Y%m%d")
         tomorrow_str = (datetime.now(JST) + timedelta(days=1)).strftime("%Y%m%d")
 
+        self.assertEqual(normalize_date("yesterday"), yesterday_str)
+        self.assertEqual(normalize_date("昨日"), yesterday_str)
         self.assertEqual(normalize_date("today"), today_str)
         self.assertEqual(normalize_date("今日"), today_str)
         self.assertEqual(normalize_date("tomorrow"), tomorrow_str)
@@ -216,6 +223,39 @@ class TestAeonCinemaScraper(unittest.TestCase):
         self.assertEqual(st1["screen"], "スクリーン1")
         self.assertEqual(st1["remaining_seats"], 50)
         self.assertEqual(st1["total_seats"], 100)
+        self.assertEqual(st1["event_id"], "event_1")
+        self.assertEqual(
+            st1["booking_url"],
+            "https://login.watatheatre.aeoncinema.com/login2?eventId=event_1",
+        )
+        self.assertEqual(
+            movie_a["booking_url"],
+            "https://login.watatheatre.aeoncinema.com/login2?eventId=event_1",
+        )
+
+        # 最速上映開始時刻順にソートされることの検証 (映画A: 08:00 < 映画B: 10:30)
+        self.assertEqual(movies[0]["title"], "映画A")
+        self.assertEqual(movies[1]["title"], "映画B")
+
+        # 逆順データ (タイトルはZが後だが上映時間はZが早い場合)
+        mock_custom_data = {
+            "20261012": {
+                "grp_a": [{
+                    "id": "e_a",
+                    "name": {"ja": "映画A"},
+                    "startDate": "2026-10-12T01:00:00.000Z",  # JST: 10:00
+                    "endDate": "2026-10-12T03:00:00.000Z",
+                }],
+                "grp_z": [{
+                    "id": "e_z",
+                    "name": {"ja": "映画Z"},
+                    "startDate": "2026-10-11T23:30:00.000Z",  # JST: 08:30
+                    "endDate": "2026-10-12T01:30:00.000Z",
+                }],
+            }
+        }
+        sorted_movies = parse_schedule_for_date(mock_custom_data, "20261012")
+        self.assertEqual([m["title"] for m in sorted_movies], ["映画Z", "映画A"])
 
         # 存在しない日付
         empty_movies = parse_schedule_for_date(MOCK_SCHEDULE_DATA, "20990101")
@@ -385,6 +425,19 @@ class TestAeonCinemaScraper(unittest.TestCase):
                     self.assertIn('"theater": "chofu"', out)
                     self.assertIn('"within_hours": 2.0', out)
                     self.assertIn('"english_mode": true', out)
+
+    @patch("aeoncinema_scraper.fetch_schedule_json", return_value=MOCK_SCHEDULE_DATA)
+    @patch("aeoncinema_scraper.load_allowed_theaters", return_value=MOCK_ALLOWED_THEATERS)
+    def test_main_json_format_no_movies(self, mock_load, mock_fetch):
+        # 存在しない日付 (20990101) で --format json
+        test_args = ["aeoncinema_scraper.py", "ebetsu", "-d", "20990101", "--format", "json"]
+        with patch.object(sys, "argv", test_args):
+            with patch("sys.stdout", new=io.StringIO()) as fake_out:
+                main()
+                data = json.loads(fake_out.getvalue())
+                self.assertEqual(data["theater"], "ebetsu")
+                self.assertEqual(data["movies"], [])
+                self.assertIn("message", data)
 
 
 if __name__ == "__main__":
