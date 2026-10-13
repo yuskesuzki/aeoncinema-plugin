@@ -197,6 +197,60 @@ def fetch_schedule_json(theater: str) -> Dict[str, Any]:
         raise RuntimeError(f"スケジュールデータの取得に失敗しました: {e}") from e
 
 
+SPECIAL_BADGES = ["IMAX", "4DX", "VIVE AUDIO", "Dolby Atmos", "THX"]
+
+
+def detect_special_badges(
+    features: List[str],
+    screen_name: str,
+    extra_texts: Optional[List[str]] = None,
+) -> List[str]:
+    """
+    スクリーン設備タグ、スクリーン名、作品名などから、特殊設備バッジ
+    ('IMAX', '4DX', 'VIVE AUDIO', 'Dolby Atmos', 'THX') を抽出する。
+    """
+    badges = []
+    targets = list(features) + [screen_name] + (extra_texts or [])
+    for badge in SPECIAL_BADGES:
+        b_norm = badge.upper().replace(" ", "")
+        for t in targets:
+            if not t:
+                continue
+            t_norm = t.upper().replace(" ", "").replace("ATOMOS", "ATMOS")
+            if b_norm in t_norm:
+                if badge not in badges:
+                    badges.append(badge)
+                break
+    return badges
+
+
+
+def match_screen_facility(
+    screen_str: str, screens: Optional[List[Dict[str, Any]]]
+) -> Optional[Dict[str, Any]]:
+    """スクリーン名（例: 'スクリーン7'）から theater.json の該当スクリーン設備情報を検索する。"""
+    if not screens:
+        return None
+    # 1. 完全一致
+    for s in screens:
+        if s.get("name") == screen_str:
+            return s
+    # 2. 数字抽出一致 (例: 'スクリーン7' と '7スクリーン')
+    num_m = re.search(r"\d+", screen_str)
+    if num_m:
+        t_num = num_m.group(0)
+        for s in screens:
+            s_num = re.search(r"\d+", s.get("name", ""))
+            if s_num and s_num.group(0) == t_num:
+                return s
+    # 3. 部分一致
+    for s in screens:
+        s_name = s.get("name", "")
+        if s_name and (s_name in screen_str or screen_str in s_name):
+            return s
+    return None
+
+
 def to_english_screen(screen_name: str) -> str:
     """スクリーン名を英語表記（例: 'Screen 1'）に変換する"""
     m = re.search(r"スクリーン\s*(\d+)", screen_name)
@@ -208,11 +262,15 @@ def to_english_screen(screen_name: str) -> str:
 
 
 def parse_schedule_for_date(
-    raw_data: Dict[str, Any], date_str: str, lang: str = "ja"
+    raw_data: Dict[str, Any],
+    date_str: str,
+    lang: str = "ja",
+    facility_screens: Optional[List[Dict[str, Any]]] = None,
 ) -> List[Dict[str, Any]]:
     """
     指定日のスケジュールデータをパースして、作品ごとの上映情報リストを作成する。
     lang='en' の場合は英語タイトル（未設定時は日本語タイトル）および英語表記のスクリーン名を優先して設定する。
+    facility_screens が渡された場合は各スクリーンに合致する設備情報および特殊設備バッジを付与する。
     """
     day_schedules = raw_data.get(date_str)
     if not day_schedules:
@@ -256,9 +314,14 @@ def parse_schedule_for_date(
             else:
                 end_time = "--:--"
 
-            screen_name = ev.get("location", {}).get("name", {}).get("ja", "スクリーン未定")
-            if lang == "en":
-                screen_name = to_english_screen(screen_name)
+            screen_name_raw = ev.get("location", {}).get("name", {}).get("ja", "スクリーン未定")
+            screen_name = to_english_screen(screen_name_raw) if lang == "en" else screen_name_raw
+
+            screen_fac = match_screen_facility(screen_name_raw, facility_screens)
+            features = screen_fac.get("features", []) if screen_fac else []
+            special_badges = detect_special_badges(
+                features, screen_name_raw, extra_texts=[title_ja, title_en]
+            )
 
             max_capacity = ev.get("maximumAttendeeCapacity")
             rem_capacity = ev.get("remainingAttendeeCapacity")
@@ -276,6 +339,8 @@ def parse_schedule_for_date(
                 "start_datetime": start_dt.isoformat() if start_iso else None,
                 "end_datetime": end_dt.isoformat() if end_iso else None,
                 "screen": screen_name,
+                "special_badges": special_badges,
+                "screen_facility": screen_fac,
                 "remaining_seats": rem_capacity,
                 "total_seats": max_capacity,
                 "event_id": event_id,
@@ -373,7 +438,8 @@ def format_text(
                 seat_info = ""
                 if s["remaining_seats"] is not None and s["total_seats"] is not None:
                     seat_info = f" [Seats: {s['remaining_seats']}/{s['total_seats']}]"
-                lines.append(f"   - {s['start_time']} - {s['end_time']}  ({s['screen']}){seat_info}")
+                badge_str = " " + " ".join(f"[{b}]" for b in s.get("special_badges", [])) if s.get("special_badges") else ""
+                lines.append(f"   - {s['start_time']} - {s['end_time']}  ({s['screen']}{badge_str}){seat_info}")
 
         return "\n".join(lines)
 
@@ -396,7 +462,8 @@ def format_text(
             seat_info = ""
             if s["remaining_seats"] is not None and s["total_seats"] is not None:
                 seat_info = f" [残席: {s['remaining_seats']}/{s['total_seats']}]"
-            lines.append(f"   ・ {s['start_time']} 〜 {s['end_time']}  ({s['screen']}){seat_info}")
+            badge_str = " " + " ".join(f"[{b}]" for b in s.get("special_badges", [])) if s.get("special_badges") else ""
+            lines.append(f"   ・ {s['start_time']} 〜 {s['end_time']}  ({s['screen']}{badge_str}){seat_info}")
 
     return "\n".join(lines)
 
@@ -413,11 +480,12 @@ def format_timetable(
     all_slots = []
     for m in movies:
         for s in m["showtimes"]:
+            badge_str = " " + " ".join(f"[{b}]" for b in s.get("special_badges", [])) if s.get("special_badges") else ""
             all_slots.append({
                 "title": m["title"],
                 "start_time": s["start_time"],
                 "end_time": s["end_time"],
-                "screen": s["screen"],
+                "screen": f"{s['screen']}{badge_str}",
                 "remaining_seats": s["remaining_seats"],
                 "total_seats": s["total_seats"],
             })
@@ -775,8 +843,9 @@ def main():
             print(f"エラー: 劇場 '{theater}' の利用可能な上映日程がありません。", file=sys.stderr)
             sys.exit(1)
 
-    # データのパース
-    movies = parse_schedule_for_date(raw_data, target_date, lang=lang)
+    # データのパース (theater.json のスクリーン設備情報を連携)
+    fac_screens = theater_obj.get("facility", {}).get("screens") if theater_obj else None
+    movies = parse_schedule_for_date(raw_data, target_date, lang=lang, facility_screens=fac_screens)
 
     filter_info: Optional[str] = None
     if args.upcoming:
@@ -791,7 +860,9 @@ def main():
         # 日付をまたぐ場合は翌日の上映データもマージ
         next_date = limit_time.strftime("%Y%m%d")
         if next_date != target_date and next_date in raw_data:
-            next_movies = parse_schedule_for_date(raw_data, next_date, lang=lang)
+            next_movies = parse_schedule_for_date(
+                raw_data, next_date, lang=lang, facility_screens=fac_screens
+            )
             # 同一タイトルの映画があれば showtimes を結合、なければ追加
             movies_by_title = {m["title"]: m for m in movies}
             for nm in next_movies:

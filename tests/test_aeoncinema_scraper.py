@@ -22,6 +22,8 @@ from aeoncinema_scraper import (
     format_timetable,
     format_csv,
     to_english_screen,
+    detect_special_badges,
+    match_screen_facility,
     fetch_schedule_json,
     main,
 )
@@ -438,6 +440,39 @@ class TestAeonCinemaScraper(unittest.TestCase):
                 self.assertEqual(data["theater"], "ebetsu")
                 self.assertEqual(data["movies"], [])
                 self.assertIn("message", data)
+
+    def test_detect_special_badges(self):
+        # 1. 設備タグから検出
+        badges = detect_special_badges(["4DX", "3-D", "トリプルエアシールド"], "スクリーン6")
+        self.assertEqual(badges, ["4DX"])
+
+        # 2. スクリーン名から検出
+        badges_imax = detect_special_badges(["トリプルエアシールド"], "IMAXレーザー")
+        self.assertEqual(badges_imax, ["IMAX"])
+
+        # 3. タイトルから検出 (Dolby Atmos, Dolby Atomos)
+        badges_atmos = detect_special_badges([], "スクリーン2", extra_texts=["オッペンハイマー (Dolby Atomos版)"])
+        self.assertEqual(badges_atmos, ["Dolby Atmos"])
+
+        # 4. THX, VIVE AUDIO
+        badges_thx = detect_special_badges(["THX"], "スクリーン7")
+        self.assertEqual(badges_thx, ["THX"])
+        badges_vive = detect_special_badges(["VIVE AUDIO"], "スクリーン8")
+        self.assertEqual(badges_vive, ["VIVE AUDIO"])
+
+    def test_match_screen_facility(self):
+        screens = [
+            {"name": "1スクリーン", "features": ["トリプルエアシールド"]},
+            {"name": "6スクリーン", "features": ["4DX"]},
+            {"name": "IMAXレーザー", "features": ["IMAX"]},
+        ]
+        # 完全一致
+        self.assertEqual(match_screen_facility("IMAXレーザー", screens)["name"], "IMAXレーザー")
+        # 数字一致 ("スクリーン6" -> "6スクリーン")
+        self.assertEqual(match_screen_facility("スクリーン6", screens)["name"], "6スクリーン")
+        self.assertEqual(match_screen_facility("スクリーン1", screens)["name"], "1スクリーン")
+        # 一致なし
+        self.assertIsNone(match_screen_facility("スクリーン99", screens))
 
 
 if __name__ == "__main__":

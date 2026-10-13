@@ -91,7 +91,7 @@ class TestUpdateTheaters(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp_json = os.path.join(tmpdir, "theater.json")
-            result = update_theaters.generate_theater_json(tmp_json)
+            result = update_theaters.generate_theater_json(tmp_json, with_facility=False)
 
             self.assertEqual(len(result), 1)
             self.assertTrue(os.path.exists(tmp_json))
@@ -101,6 +101,64 @@ class TestUpdateTheaters(unittest.TestCase):
             self.assertEqual(data[0]["id"], "ebetsu")
             self.assertEqual(data[0]["name"], "江別")
 
+    def test_parse_facility_html(self):
+        sample_facility_html = """
+        <div class="c-modal" data-modal="modal_seat_0">
+          <div class="c-modal__body">
+            <img src="https://theater.aeoncinema.com/uploads/theaters/seatmap/1005/01.gif" alt="">
+          </div>
+        </div>
+        <section class="p-facility__facilitys" id="facility">
+          <div class="p-facility__block">
+            <div class="p-facility__picture">
+              <span>3・7番スクリーン導入</span>
+            </div>
+            <p class="p-facility__name">デジタル3D</p>
+            <p class="p-facility__lead">臨場感あふれる3D映像体験。</p>
+          </div>
+        </section>
+        <section class="p-facility__screens" id="screen">
+          <div class="p-facility__screenLists">
+            <div class="p-facility__screenList c-accordion">
+              <label class="c-accordion__header">
+                <span class="c-accordion__label">1スクリーン</span>
+              </label>
+              <div class="c-accordion__body">
+                <div class="p-facility__chip">
+                  <span data-chip="アップグレードシート">アップグレードシート</span>
+                  <span data-chip="トリプルエアシールド">トリプルエアシールド</span>
+                </div>
+                <div class="p-facility__detail">
+                  <a href="#" data-modal="modal_seat_0">座席図</a>
+                </div>
+                <div class="p-facility__tables">
+                  <table>
+                    <tr><th>通常座席</th><td>300席</td></tr>
+                    <tr><th>アップグレードシート</th><td>10席</td></tr>
+                    <tr><th>合 計</th><td>310席</td></tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        """
+        facility = update_theaters.parse_facility_html(sample_facility_html, "ebetsu")
+        self.assertEqual(facility["url"], "https://www.aeoncinema.com/ebetsu/facility/")
+        self.assertEqual(len(facility["screens"]), 1)
+        screen = facility["screens"][0]
+        self.assertEqual(screen["name"], "1スクリーン")
+        self.assertEqual(screen["features"], ["アップグレードシート", "トリプルエアシールド"])
+        self.assertEqual(screen["total_seats"], 310)
+        self.assertEqual(screen["seats"]["通常座席"], 300)
+        self.assertEqual(screen["seat_map_url"], "https://theater.aeoncinema.com/uploads/theaters/seatmap/1005/01.gif")
+
+        self.assertEqual(len(facility["theater_services"]), 1)
+        service = facility["theater_services"][0]
+        self.assertEqual(service["name"], "デジタル3D")
+        self.assertEqual(service["screen"], "3・7番スクリーン導入")
+
 
 if __name__ == "__main__":
     unittest.main()
+

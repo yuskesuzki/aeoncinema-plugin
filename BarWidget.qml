@@ -24,6 +24,57 @@ BarWidget {
   property bool popupOpen: false
   property bool showSettingsPanel: false
   property string theaterSearchText: ""
+  property bool showScreenModal: false
+  property string currentScreenTitle: ""
+  property var currentScreenFacility: null
+
+  function showScreenDetails(screenName, facilityData) {
+    currentScreenTitle = screenName
+    if (facilityData) {
+      currentScreenFacility = facilityData
+    } else {
+      currentScreenFacility = root.findScreenFacility(screenName)
+    }
+    showScreenModal = true
+  }
+
+  function findScreenFacility(screenName) {
+    for (var i = 0; i < allTheaters.length; i++) {
+      if (allTheaters[i].id === selectedTheater && allTheaters[i].facility && allTheaters[i].facility.screens) {
+        var screens = allTheaters[i].facility.screens
+        var numMatch = screenName.match(/\d+/)
+        for (var j = 0; j < screens.length; j++) {
+          var s = screens[j]
+          if (s.name === screenName) return s
+          if (numMatch && s.name.indexOf(numMatch[0]) !== -1) return s
+        }
+      }
+    }
+    return null
+  }
+
+  function getSeatRows(seatsObj) {
+    if (!seatsObj) return []
+    var rows = []
+    for (var k in seatsObj) {
+      if (k !== "合 計" && k !== "合計" && k !== "total" && k !== "Total") {
+        rows.push({ type: k, count: seatsObj[k] })
+      }
+    }
+    return rows
+  }
+
+  onShowSettingsPanelChanged: {
+    if (showSettingsPanel) {
+      Qt.callLater(function() {
+        if (typeof searchInput !== "undefined" && searchInput) {
+          searchInput.forceActiveFocus()
+        }
+      })
+    } else {
+      theaterSearchText = ""
+    }
+  }
 
   readonly property string scriptPath: String(Qt.resolvedUrl("aeoncinema_scraper.py")).replace(/^file:\/\//, "")
   readonly property string theaterJsonPath: String(Qt.resolvedUrl("theater.json")).replace(/^file:\/\//, "")
@@ -254,8 +305,8 @@ BarWidget {
     }
   }
 
-  // ポップアップ詳細パネル
-  PopupCard {
+  // ポップアップ詳細パネル (キーボード入力対応のため KeyboardPanel を使用)
+  KeyboardPanel {
     id: popup
     anchorItem: root
     bar: root.bar
@@ -268,6 +319,9 @@ BarWidget {
       if (root.popupOpen !== open) {
         root.popupOpen = open
       }
+      if (!open) {
+        root.showScreenModal = false
+      }
     }
 
     Column {
@@ -279,7 +333,7 @@ BarWidget {
       RowLayout {
         width: parent.width
 
-        // タイトル & 劇場名 (クリックで劇場公式HPへ移動)
+        // タイトル & 劇場名 (クリックで劇場選択パネルを表示)
         Rectangle {
           radius: Style.space(6)
           color: titleHover.containsMouse ? Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.08) : "transparent"
@@ -301,26 +355,31 @@ BarWidget {
               font.pixelSize: Style.font ? Style.font.title : 16
               font.bold: true
             }
-            // 劇場名バッジ
+            // 劇場名バッジ (ドロップダウンインジケーター付き)
             Rectangle {
               radius: Style.space(4)
-              color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.15)
-              implicitWidth: theaterLabel.implicitWidth + Style.space(10)
-              implicitHeight: theaterLabel.implicitHeight + Style.space(4)
+              color: root.showSettingsPanel ? Color.accent : Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.15)
+              implicitWidth: theaterLabelRow.implicitWidth + Style.space(10)
+              implicitHeight: theaterLabelRow.implicitHeight + Style.space(4)
 
-              Text {
-                id: theaterLabel
+              RowLayout {
+                id: theaterLabelRow
                 anchors.centerIn: parent
-                text: root.theaterDisplayName
-                color: root.bar ? root.bar.foreground : Color.foreground
-                font.pixelSize: Style.font ? Style.font.caption : 11
-                font.bold: true
+                spacing: Style.space(4)
+
+                Text {
+                  id: theaterLabel
+                  text: root.theaterDisplayName
+                  color: root.showSettingsPanel ? Color.background : (root.bar ? root.bar.foreground : Color.foreground)
+                  font.pixelSize: Style.font ? Style.font.caption : 11
+                  font.bold: true
+                }
+                Text {
+                  text: root.showSettingsPanel ? "▲" : "▼"
+                  color: root.showSettingsPanel ? Color.background : Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.6)
+                  font.pixelSize: Style.font ? Style.font.caption : 9
+                }
               }
-            }
-            Text {
-              text: "↗"
-              color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.45)
-              font.pixelSize: Style.font ? Style.font.caption : 10
             }
           }
 
@@ -330,12 +389,43 @@ BarWidget {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
+              root.showSettingsPanel = !root.showSettingsPanel
+            }
+            onEntered: if (root.bar) root.bar.showTooltip(parent, root.englishMode ? "Click to select theater" : "クリックして劇場を選択・変更")
+            onExited: if (root.bar) root.bar.hideTooltip(parent)
+          }
+        }
+
+        // 劇場の公式ホームページ閲覧アイコン [HP]
+        Rectangle {
+          radius: Style.space(4)
+          color: hpHover.containsMouse ? Color.accent : Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.1)
+          border.color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.15)
+          border.width: 1
+          implicitWidth: hpLabel.implicitWidth + Style.space(10)
+          implicitHeight: Style.space(24)
+
+          Text {
+            id: hpLabel
+            anchors.centerIn: parent
+            text: "[HP]"
+            color: hpHover.containsMouse ? Color.background : (root.bar ? root.bar.foreground : Color.foreground)
+            font.pixelSize: Style.font ? Style.font.caption : 11
+            font.bold: true
+          }
+
+          MouseArea {
+            id: hpHover
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
               var url = "https://theater.aeoncinema.com/theaters/" + root.selectedTheater + "/"
               if (root.bar && typeof root.bar.run === "function") {
                 root.bar.run("xdg-open '" + url + "'")
               }
             }
-            onEntered: if (root.bar) root.bar.showTooltip(parent, root.englishMode ? "Open theater website" : (root.theaterDisplayName + " の公式ホームページを開く"))
+            onEntered: if (root.bar) root.bar.showTooltip(parent, root.englishMode ? "Open theater homepage" : (root.theaterDisplayName + " の公式ホームページを開く"))
             onExited: if (root.bar) root.bar.hideTooltip(parent)
           }
         }
@@ -475,32 +565,45 @@ BarWidget {
           }
 
           // 検索フィルター
-          Rectangle {
+          RowLayout {
             width: parent.width
-            height: Style.space(28)
-            radius: Style.space(4)
-            color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.1)
+            spacing: Style.space(6)
 
-            TextInput {
+            TextField {
               id: searchInput
-              anchors.fill: parent
-              anchors.leftMargin: Style.space(8)
-              anchors.rightMargin: Style.space(8)
-              verticalAlignment: TextInput.AlignVCenter
-              color: root.bar ? root.bar.foreground : Color.foreground
+              Layout.fillWidth: true
+              placeholderText: root.englishMode ? "Filter theaters..." : "劇場名・地域で絞り込み..."
               font.pixelSize: Style.font ? Style.font.caption : 12
-              clip: true
+              verticalPadding: Style.space(4)
+              horizontalPadding: Style.space(8)
+              text: root.theaterSearchText
+              onTextChanged: root.theaterSearchText = text.trim().toLowerCase()
+            }
+
+            Rectangle {
+              visible: searchInput.text !== ""
+              radius: Style.space(4)
+              color: clearHover.containsMouse ? Color.accent : Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.1)
+              implicitWidth: Style.space(26)
+              implicitHeight: Style.space(26)
 
               Text {
-                anchors.fill: parent
-                verticalAlignment: Text.AlignVCenter
-                visible: searchInput.text === ""
-                text: root.englishMode ? "Filter theaters..." : "劇場名・地域で絞り込み..."
-                color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.4)
-                font.pixelSize: Style.font ? Style.font.caption : 12
+                anchors.centerIn: parent
+                text: "✕"
+                color: clearHover.containsMouse ? Color.background : (root.bar ? root.bar.foreground : Color.foreground)
+                font.pixelSize: Style.font ? Style.font.caption : 11
               }
 
-              onTextChanged: root.theaterSearchText = text.trim().toLowerCase()
+              MouseArea {
+                id: clearHover
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: {
+                  searchInput.text = ""
+                  searchInput.forceActiveFocus()
+                }
+              }
             }
           }
 
@@ -773,11 +876,57 @@ BarWidget {
                       }
                     }
 
-                    // スクリーン名
-                    Text {
-                      text: modelData.screen
-                      color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.7)
-                      font.pixelSize: Style.font ? Style.font.caption : 11
+                    // スクリーン名 (クリックで設備・座席詳細ポップアップ)
+                    Rectangle {
+                      radius: Style.space(3)
+                      color: screenHover.containsMouse ? Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.12) : "transparent"
+                      implicitWidth: screenTxt.implicitWidth + Style.space(6)
+                      implicitHeight: Style.space(20)
+
+                      Text {
+                        id: screenTxt
+                        anchors.centerIn: parent
+                        text: modelData.screen
+                        color: screenHover.containsMouse ? Color.accent : Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.8)
+                        font.pixelSize: Style.font ? Style.font.caption : 11
+                        font.underline: screenHover.containsMouse
+                      }
+
+                      MouseArea {
+                        id: screenHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: function(mouse) {
+                          mouse.accepted = true
+                          root.showScreenDetails(modelData.screen, modelData.screen_facility)
+                        }
+                        onEntered: if (root.bar) root.bar.showTooltip(parent, root.englishMode ? ("Click to view details for " + modelData.screen) : (modelData.screen + " の設備・座席詳細を表示"))
+                        onExited: if (root.bar) root.bar.hideTooltip(parent)
+                      }
+                    }
+
+                    // 特殊設備バッジ ("[IMAX]", "[4DX]", "[VIVE AUDIO]", "[Dolby Atmos]", "[THX]")
+                    Repeater {
+                      model: modelData.special_badges || []
+
+                      delegate: Rectangle {
+                        radius: Style.space(3)
+                        color: Util.alpha(Color.accent, 0.18)
+                        border.color: Util.alpha(Color.accent, 0.5)
+                        border.width: 1
+                        implicitWidth: badgeTxt.implicitWidth + Style.space(6)
+                        implicitHeight: Style.space(18)
+
+                        Text {
+                          id: badgeTxt
+                          anchors.centerIn: parent
+                          text: "[" + modelData + "]"
+                          color: Color.accent
+                          font.pixelSize: Style.font ? Style.font.caption : 10
+                          font.bold: true
+                        }
+                      }
                     }
 
                     Item { Layout.fillWidth: true }
@@ -841,6 +990,271 @@ BarWidget {
                       }
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // スクリーン設備詳細モーダル (半透明オーバーレイ + 詳細カード)
+    Rectangle {
+      id: screenModalOverlay
+      visible: root.showScreenModal
+      anchors.fill: parent
+      color: Util.alpha(Color.background, 0.85)
+      z: 50
+
+      MouseArea {
+        anchors.fill: parent
+        onClicked: root.showScreenModal = false
+      }
+
+      Rectangle {
+        id: screenModalCard
+        anchors.centerIn: parent
+        width: Math.min(parent.width - Style.space(28), Style.space(380))
+        implicitHeight: modalColumn.implicitHeight + Style.space(28)
+        radius: Style.space(8)
+        color: (typeof Color.surface !== "undefined" && Color.surface) ? Color.surface : (root.bar ? root.bar.background : Color.background)
+        border.color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.15)
+        border.width: 1
+
+        MouseArea {
+          // カード内部クリックの伝播を防止
+          anchors.fill: parent
+          onClicked: function(mouse) { mouse.accepted = true }
+        }
+
+        Column {
+          id: modalColumn
+          anchors.top: parent.top
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.margins: Style.space(14)
+          spacing: Style.space(10)
+
+          // 1. ヘッダー: スクリーン名 & ✕ボタン
+          RowLayout {
+            width: parent.width
+
+            RowLayout {
+              spacing: Style.space(6)
+              Text {
+                text: "🎦"
+                font.pixelSize: Style.font ? Style.font.title : 16
+              }
+              Text {
+                text: root.currentScreenTitle || (root.currentScreenFacility ? root.currentScreenFacility.name : "")
+                color: root.bar ? root.bar.foreground : Color.foreground
+                font.pixelSize: Style.font ? Style.font.title : 15
+                font.bold: true
+              }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Rectangle {
+              radius: Style.space(4)
+              color: closeModalHover.containsMouse ? Util.alpha(Color.accent, 0.2) : "transparent"
+              implicitWidth: Style.space(24)
+              implicitHeight: Style.space(24)
+
+              Text {
+                anchors.centerIn: parent
+                text: "✕"
+                color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.7)
+                font.pixelSize: Style.font ? Style.font.caption : 12
+                font.bold: true
+              }
+
+              MouseArea {
+                id: closeModalHover
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.showScreenModal = false
+              }
+            }
+          }
+
+          // 区切り線
+          Rectangle {
+            width: parent.width
+            height: 1
+            color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.1)
+          }
+
+          // 2. 設備 (Features)
+          Column {
+            width: parent.width
+            spacing: Style.space(6)
+
+            Text {
+              text: root.englishMode ? "Features & Audio" : "設備・音響"
+              color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.7)
+              font.pixelSize: Style.font ? Style.font.caption : 11
+              font.bold: true
+            }
+
+            Flow {
+              width: parent.width
+              spacing: Style.space(6)
+
+              Repeater {
+                model: (root.currentScreenFacility && root.currentScreenFacility.features && root.currentScreenFacility.features.length > 0) ? root.currentScreenFacility.features : []
+
+                delegate: Rectangle {
+                  radius: Style.space(4)
+                  color: {
+                    var name = String(modelData)
+                    if (name.indexOf("IMAX") !== -1 || name.indexOf("4DX") !== -1 || name.indexOf("Dolby") !== -1 || name.indexOf("THX") !== -1 || name.indexOf("VIVE") !== -1) {
+                      return Util.alpha(Color.accent, 0.25)
+                    }
+                    return Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.08)
+                  }
+                  border.color: {
+                    var name = String(modelData)
+                    if (name.indexOf("IMAX") !== -1 || name.indexOf("4DX") !== -1 || name.indexOf("Dolby") !== -1 || name.indexOf("THX") !== -1 || name.indexOf("VIVE") !== -1) {
+                      return Util.alpha(Color.accent, 0.6)
+                    }
+                    return Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.15)
+                  }
+                  border.width: 1
+                  implicitWidth: featTxt.implicitWidth + Style.space(10)
+                  implicitHeight: Style.space(22)
+
+                  Text {
+                    id: featTxt
+                    anchors.centerIn: parent
+                    text: modelData
+                    color: root.bar ? root.bar.foreground : Color.foreground
+                    font.pixelSize: Style.font ? Style.font.caption : 11
+                    font.bold: true
+                  }
+                }
+              }
+
+              Text {
+                visible: !root.currentScreenFacility || !root.currentScreenFacility.features || root.currentScreenFacility.features.length === 0
+                text: root.englishMode ? "Standard Screen (No special equipment)" : "標準設備"
+                color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.5)
+                font.pixelSize: Style.font ? Style.font.caption : 11
+              }
+            }
+          }
+
+          // 区切り線
+          Rectangle {
+            width: parent.width
+            height: 1
+            color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.1)
+          }
+
+          // 3. 座席種類と席数
+          Column {
+            width: parent.width
+            spacing: Style.space(6)
+
+            RowLayout {
+              width: parent.width
+              Text {
+                text: root.englishMode ? "Seat Breakdown" : "座席種類と席数"
+                color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.7)
+                font.pixelSize: Style.font ? Style.font.caption : 11
+                font.bold: true
+              }
+              Item { Layout.fillWidth: true }
+              Text {
+                text: {
+                  var total = (root.currentScreenFacility && root.currentScreenFacility.total_seats) ? root.currentScreenFacility.total_seats : "-"
+                  return root.englishMode ? ("Total: " + total + " seats") : ("総座席数: " + total + "席")
+                }
+                color: Color.accent
+                font.pixelSize: Style.font ? Style.font.caption : 11
+                font.bold: true
+              }
+            }
+
+            Column {
+              width: parent.width
+              spacing: Style.space(4)
+
+              Repeater {
+                model: root.getSeatRows(root.currentScreenFacility ? root.currentScreenFacility.seats : null)
+
+                delegate: Rectangle {
+                  width: parent.width
+                  implicitHeight: Style.space(22)
+                  radius: Style.space(4)
+                  color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.05)
+
+                  RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Style.space(8)
+                    anchors.rightMargin: Style.space(8)
+
+                    Text {
+                      text: modelData.type
+                      color: root.bar ? root.bar.foreground : Color.foreground
+                      font.pixelSize: Style.font ? Style.font.caption : 11
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Text {
+                      text: modelData.count + (root.englishMode ? " seats" : " 席")
+                      color: root.bar ? root.bar.foreground : Color.foreground
+                      font.pixelSize: Style.font ? Style.font.caption : 11
+                      font.bold: true
+                    }
+                  }
+                }
+              }
+
+              Text {
+                visible: !root.currentScreenFacility || !root.currentScreenFacility.seats
+                text: root.englishMode ? "Seat breakdown unavailable" : "座席内訳情報がありません"
+                color: Util.alpha(root.bar ? root.bar.foreground : Color.foreground, 0.5)
+                font.pixelSize: Style.font ? Style.font.caption : 11
+              }
+            }
+          }
+
+          // 4. 公式座席図リンク
+          Rectangle {
+            visible: Boolean(root.currentScreenFacility && root.currentScreenFacility.seat_map_url)
+            width: parent.width
+            implicitHeight: Style.space(26)
+            radius: Style.space(4)
+            color: seatMapHover.containsMouse ? Util.alpha(Color.accent, 0.3) : Util.alpha(Color.accent, 0.15)
+            border.color: Util.alpha(Color.accent, 0.4)
+            border.width: 1
+
+            RowLayout {
+              anchors.centerIn: parent
+              spacing: Style.space(6)
+              Text {
+                text: "🗺️"
+                font.pixelSize: Style.font ? Style.font.caption : 11
+              }
+              Text {
+                text: root.englishMode ? "View Official Seat Map" : "公式座席図を開く"
+                color: root.bar ? root.bar.foreground : Color.foreground
+                font.pixelSize: Style.font ? Style.font.caption : 11
+                font.bold: true
+              }
+            }
+
+            MouseArea {
+              id: seatMapHover
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                if (root.currentScreenFacility && root.currentScreenFacility.seat_map_url && root.bar && typeof root.bar.run === "function") {
+                  root.bar.run("xdg-open '" + root.currentScreenFacility.seat_map_url + "'")
                 }
               }
             }
