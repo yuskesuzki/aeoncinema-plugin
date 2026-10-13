@@ -3,8 +3,9 @@
   "id": "com.yusuke.aeoncinema",
   "name": "Aeon Cinema",
   "version": "1.0.0",
-  "author": "Yusuke",
-  "description": "イオンシネマの上映スケジュール・直近作品確認ウィジェット",
+  "author": "Yusuke Suzuki",
+  "license": "MIT",
+  "description": "イオンシネマの上映スケジュール、スクリーン設備情報（IMAX/4DX等）、座席予約リンクを表示するバーウィジェット",
   "kinds": [
     "bar-widget"
   ],
