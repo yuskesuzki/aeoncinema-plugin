@@ -64,6 +64,13 @@ BarWidget {
     return rows
   }
 
+  function openExternalUrl(url) {
+    if (!url || typeof url !== "string") return
+    var trimmed = url.trim()
+    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) return
+    Qt.openUrlExternally(trimmed)
+  }
+
   onShowSettingsPanelChanged: {
     if (showSettingsPanel) {
       Qt.callLater(function() {
@@ -420,10 +427,8 @@ BarWidget {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: {
-              var url = "https://theater.aeoncinema.com/theaters/" + root.selectedTheater + "/"
-              if (root.bar && typeof root.bar.run === "function") {
-                root.bar.run("xdg-open '" + url + "'")
-              }
+              var url = "https://theater.aeoncinema.com/theaters/" + encodeURIComponent(root.selectedTheater) + "/"
+              root.openExternalUrl(url)
             }
             onEntered: if (root.bar) root.bar.showTooltip(parent, root.englishMode ? "Open theater homepage" : (root.theaterDisplayName + " の公式ホームページを開く"))
             onExited: if (root.bar) root.bar.hideTooltip(parent)
@@ -840,10 +845,7 @@ BarWidget {
                       cursorShape: Qt.PointingHandCursor
                       onClicked: function(mouse) {
                         mouse.accepted = true
-                        var url = modelData.booking_url
-                        if (url && root.bar && typeof root.bar.run === "function") {
-                          root.bar.run("xdg-open '" + url + "'")
-                        }
+                        root.openExternalUrl(modelData.booking_url)
                       }
                       onEntered: if (root.bar) root.bar.showTooltip(parent, root.englishMode ? "Book ticket on official Watatheatre site" : "ワタシアター予約購入ページを開く")
                       onExited: if (root.bar) root.bar.hideTooltip(parent)
@@ -980,10 +982,7 @@ BarWidget {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: function(mouse) {
                           mouse.accepted = true
-                          var url = modelData.booking_url
-                          if (url && root.bar && typeof root.bar.run === "function") {
-                            root.bar.run("xdg-open '" + url + "'")
-                          }
+                          root.openExternalUrl(modelData.booking_url)
                         }
                         onEntered: if (root.bar) root.bar.showTooltip(parent, root.englishMode ? ("Book ticket for " + modelData.start_time) : (modelData.start_time + " のチケットを予約購入"))
                         onExited: if (root.bar) root.bar.hideTooltip(parent)
@@ -1253,8 +1252,8 @@ BarWidget {
               hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
               onClicked: {
-                if (root.currentScreenFacility && root.currentScreenFacility.seat_map_url && root.bar && typeof root.bar.run === "function") {
-                  root.bar.run("xdg-open '" + root.currentScreenFacility.seat_map_url + "'")
+                if (root.currentScreenFacility && root.currentScreenFacility.seat_map_url) {
+                  root.openExternalUrl(root.currentScreenFacility.seat_map_url)
                 }
               }
             }

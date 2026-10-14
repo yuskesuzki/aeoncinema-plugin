@@ -24,6 +24,7 @@ from aeoncinema_scraper import (
     to_english_screen,
     detect_special_badges,
     match_screen_facility,
+    build_safe_booking_url,
     fetch_schedule_json,
     main,
 )
@@ -473,6 +474,35 @@ class TestAeonCinemaScraper(unittest.TestCase):
         self.assertEqual(match_screen_facility("スクリーン1", screens)["name"], "1スクリーン")
         # 一致なし
         self.assertIsNone(match_screen_facility("スクリーン99", screens))
+
+    def test_build_safe_booking_url(self):
+        # 1. 正常なID (16進数ハッシュや英数字)
+        valid_id = "6ac3b68aaf7191571136985e"
+        url = build_safe_booking_url(valid_id)
+        self.assertEqual(url, f"https://login.watatheatre.aeoncinema.com/login2?eventId={valid_id}")
+
+        # 2. ハイフンやアンダースコアを含むID
+        self.assertIsNotNone(build_safe_booking_url("ev-123_abc"))
+
+        # 3. コマンドインジェクション攻撃文字列（シングルクォート、セミコロン、パイプなど）を拒絶
+        self.assertIsNone(build_safe_booking_url("ev' ; rm -rf ~ ; echo '"))
+        self.assertIsNone(build_safe_booking_url("ev`whoami`"))
+        self.assertIsNone(build_safe_booking_url("ev$(id)"))
+        self.assertIsNone(build_safe_booking_url("ev | cat /etc/passwd"))
+
+        # 4. スペース、改行、不正文字
+        self.assertIsNone(build_safe_booking_url("ev 123"))
+        self.assertIsNone(build_safe_booking_url("ev\n123"))
+        self.assertIsNone(build_safe_booking_url("ev<script>"))
+
+        # 5. 空文字、None、型不正
+        self.assertIsNone(build_safe_booking_url(""))
+        self.assertIsNone(build_safe_booking_url("   "))
+        self.assertIsNone(build_safe_booking_url(None))
+        self.assertIsNone(build_safe_booking_url(12345))
+
+        # 6. 長すぎるID (64文字超)
+        self.assertIsNone(build_safe_booking_url("a" * 65))
 
 
 if __name__ == "__main__":

@@ -251,6 +251,20 @@ def match_screen_facility(
     return None
 
 
+def build_safe_booking_url(event_id: Any) -> Optional[str]:
+    """
+    ワタシアターのイベントIDを安全に検証・URLエンコードし、予約URLを生成する。
+    英数字、ハイフン、アンダースコア（1〜64文字）のみを許可し、悪意あるシェル構文や記号を拒絶する。
+    """
+    if not event_id or not isinstance(event_id, str):
+        return None
+    trimmed = event_id.strip()
+    if not re.match(r"^[a-zA-Z0-9_\-]{1,64}$", trimmed):
+        return None
+    safe_id = urllib.parse.quote(trimmed, safe="")
+    return f"https://login.watatheatre.aeoncinema.com/login2?eventId={safe_id}"
+
+
 def to_english_screen(screen_name: str) -> str:
     """スクリーン名を英語表記（例: 'Screen 1'）に変換する"""
     m = re.search(r"スクリーン\s*(\d+)", screen_name)
@@ -327,11 +341,7 @@ def parse_schedule_for_date(
             rem_capacity = ev.get("remainingAttendeeCapacity")
 
             event_id = ev.get("id") or ev.get("offers", {}).get("itemOffered", {}).get("id")
-            booking_url = (
-                f"https://login.watatheatre.aeoncinema.com/login2?eventId={event_id}"
-                if event_id
-                else None
-            )
+            booking_url = build_safe_booking_url(event_id)
 
             showtimes.append({
                 "start_time": start_time,
