@@ -229,11 +229,11 @@ class TestAeonCinemaScraper(unittest.TestCase):
         self.assertEqual(st1["event_id"], "event_1")
         self.assertEqual(
             st1["booking_url"],
-            "https://login.watatheatre.aeoncinema.com/login2?eventId=event_1",
+            "https://login.watatheatre.aeoncinema.com/auth?eventId=event_1",
         )
         self.assertEqual(
             movie_a["booking_url"],
-            "https://login.watatheatre.aeoncinema.com/login2?eventId=event_1",
+            "https://login.watatheatre.aeoncinema.com/auth?eventId=event_1",
         )
 
         # 最速上映開始時刻順にソートされることの検証 (映画A: 08:00 < 映画B: 10:30)
@@ -479,7 +479,7 @@ class TestAeonCinemaScraper(unittest.TestCase):
         # 1. 正常なID (16進数ハッシュや英数字)
         valid_id = "6ac3b68aaf7191571136985e"
         url = build_safe_booking_url(valid_id)
-        self.assertEqual(url, f"https://login.watatheatre.aeoncinema.com/login2?eventId={valid_id}")
+        self.assertEqual(url, f"https://login.watatheatre.aeoncinema.com/auth?eventId={valid_id}")
 
         # 2. ハイフンやアンダースコアを含むID
         self.assertIsNotNone(build_safe_booking_url("ev-123_abc"))

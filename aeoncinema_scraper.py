@@ -262,7 +262,7 @@ def build_safe_booking_url(event_id: Any) -> Optional[str]:
     if not re.match(r"^[a-zA-Z0-9_\-]{1,64}$", trimmed):
         return None
     safe_id = urllib.parse.quote(trimmed, safe="")
-    return f"https://login.watatheatre.aeoncinema.com/login2?eventId={safe_id}"
+    return f"https://login.watatheatre.aeoncinema.com/auth?eventId={safe_id}"
 
 
 def to_english_screen(screen_name: str) -> str:
